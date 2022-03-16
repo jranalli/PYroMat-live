@@ -1,0 +1,82 @@
+{% extends "nav.html" %}
+{% block content %}
+    <div id="sidebar">
+    <h3>Select Substance</h3>
+        <select id="sel-substance">
+            {% for subst in subst_list %}
+                <OPTION value={{subst}}>{{subst}}</option>
+            {% endfor %}
+        </select>
+        <button id="btnDetails" onclick="getSubstInfo();">Details</button>
+    </div>
+    <br>
+
+    <br><br>
+    <div id="subst-info">
+      <h3>Results</h3>
+        Critical Point Properties
+        <p id="critical-table"></p>
+      <br>
+    </div>
+
+    <script>
+
+    function jsonToTable(data, targetContainer){
+        var col = [];
+        for (var key in data) {
+                col.push(key);
+        }
+
+        // CREATE DYNAMIC TABLE.
+        var table = document.createElement("table");
+
+        // CREATE HTML TABLE HEADER ROW USING THE EXTRACTED HEADERS ABOVE.
+        var tr = table.insertRow(-1);                   // TABLE ROW.
+
+        for (var i = 0; i < col.length; i++) {
+            var th = document.createElement("th");      // TABLE HEADER.
+            th.innerHTML = col[i];
+            tr.appendChild(th);
+        }
+
+        // ADD JSON DATA TO THE TABLE AS ROWS.
+        for (var i = 0; i < [data].length; i++) {
+
+            tr = table.insertRow(-1);
+
+            for (var j = 0; j < col.length; j++) {
+                var tabCell = tr.insertCell(-1);
+                tabCell.innerHTML = [data][i][col[j]].toFixed(2);
+            }
+        }
+        targetContainer.innerHTML = "";
+        targetContainer.appendChild(table);
+    }
+
+
+    function getSubstInfo() {
+      var subst = document.getElementById("sel-substance").value;
+      var divContainer = document.getElementById("critical-table");
+
+      var server_data = {"subst": subst};
+
+
+      $.ajax({
+          type: "POST",
+          url: "/subst_info",
+          data: JSON.stringify(server_data),
+          contentType: "application/json",
+          dataType: 'json',
+          success: function(result) {
+              console.log("Result:");
+              console.log(result);
+              jsonToTable(result, divContainer);
+          }
+      });
+
+      var infoContainer = document.getElementById("subst-info");
+      infoContainer.style.display = "block";
+    }
+    </script>
+
+{% endblock %}

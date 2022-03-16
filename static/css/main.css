@@ -1,0 +1,11 @@
+h3 {
+    color: purple;
+}
+
+#subst-info {
+  display: none;
+}
+
+th, td {
+    padding: 10pt
+}
