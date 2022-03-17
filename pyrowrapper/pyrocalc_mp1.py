@@ -170,25 +170,25 @@ def compute_sat_state(subst, **kwargs):
     vg = 1/dg
     ef, eg = subst.es(T=Ts)
     xf = np.zeros_like(sf)
-    xg = np.zeros_like(sg)
+    xg = np.ones_like(sg)
     liq_state = {
-            'p': ps,
             'T': Ts,
+            'p': ps,
+            'd': df,
+            'v': vf,
+            'e': ef,
             's': sf,
             'h': hf,
-            'v': vf,
-            'd': df,
-            'e': ef,
             'x': xf
         }
     vap_state = {
-            'p': ps,
             'T': Ts,
+            'p': ps,
+            'd': dg,
+            'v': vg,
+            'e': eg,
             's': sg,
             'h': hg,
-            'v': vg,
-            'd': dg,
-            'e': eg,
             'x': xg
         }
     return liq_state, vap_state
@@ -206,13 +206,13 @@ def compute_critical(subst):
     xc = np.array([0])
 
     critical = {
-            'p': pc,
             'T': Tc,
+            'p': pc,
+            'd': dc,
+            'v': vc,
+            'e': ec,
             's': sc,
             'h': hc,
-            'v': vc,
-            'd': dc,
-            'e': ec,
             'x': xc
         }
     return critical
@@ -337,13 +337,13 @@ def compute_state(subst, **kwargs):
         raise pm.utility.PMParamError("Property pair not permitted.")
 
     state = {
-            'p': p,
             'T': T,
+            'p': p,
+            'd': d,
+            'v': v,
+            'e': e,
             's': s,
             'h': h,
-            'v': v,
-            'd': d,
-            'e': e,
             'x': x
         }
     return state

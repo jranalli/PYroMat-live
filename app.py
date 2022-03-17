@@ -3,7 +3,7 @@ import json
 from collections import OrderedDict
 
 import pyromat as pm
-from pyrowrapper.pyrocalc_mp1 import compute_critical
+from pyrowrapper.pyrocalc_mp1 import compute_critical, compute_steamdome, compute_iso_line
 
 from numpy_encoder import NumpyArrayEncoder
 
@@ -17,12 +17,23 @@ def get_info():
     subst = pm.get('mp.'+json_data['subst'])
     data = compute_critical(subst)
 
-    proporder = ['T', 'p', 'd', 'v', 'e', 'h', 's', 'x']
-    odata = OrderedDict()
-    for i in proporder:
-        odata[i] = data[i][0]
+    return json.dumps(data, cls=NumpyArrayEncoder)
 
-    return json.dumps(odata, cls=NumpyArrayEncoder)
+
+@app.route('/steam_dome', methods=['POST'])
+def steam_dome():
+    json_data = request.get_json()
+    subst = pm.get('mp.'+json_data['subst'])
+    data = compute_steamdome(subst)
+
+    return json.dumps(data, cls=NumpyArrayEncoder)
+
+@app.route('/isobars', methods=['POST'])
+def isobar():
+    json_data = request.get_json()
+    subst = pm.get('mp.'+json_data['subst'])
+    data = compute_iso_line(subst, p=1)
+    return json.dumps(data, cls=NumpyArrayEncoder)
 
 
 @app.route('/')

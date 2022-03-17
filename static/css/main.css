@@ -6,6 +6,10 @@ h3 {
   display: none;
 }
 
+#testplot {
+  display: none;
+}
+
 th, td {
     padding: 10pt
 }
