@@ -7,7 +7,8 @@
                 <OPTION value={{subst}}>{{subst}}</option>
             {% endfor %}
         </select>
-        <button id="btnDetails" onclick="getSubstInfo();">Details</button>
+        <button id="btnDetails" onclick="changeSubstance();">Details</button>
+        <button id="btnAddPt" onclick="addPoint();">Add Point</button>
     </div>
     <br>
 
@@ -20,152 +21,210 @@
     </div>
 
     <div id="testplot" style="width:600px;height:400px;"></div>
-
+    Specified Points
+    <p id="point-table"></p>
     <script>
 
         var crit_pt;
         var steam_dome;
-        var isobar;
+        var isobars;
         var x_prop = 's';
         var y_prop = 'T';
+        var points;
 
-    function jsonToTable(data, targetContainer){
-        var col = [];
-        for (var key in data) {
-            col.push(key);
-        }
-
-        // CREATE DYNAMIC TABLE.
-        var table = document.createElement("table");
-
-        // CREATE HTML TABLE HEADER ROW USING THE EXTRACTED HEADERS ABOVE.
-        var tr = table.insertRow(-1);                   // TABLE ROW.
-
-        for (var i = 0; i < col.length; i++) {
-            var th = document.createElement("th");      // TABLE HEADER.
-            th.innerHTML = col[i];
-            tr.appendChild(th);
-        }
-
-        // ADD JSON DATA TO THE TABLE AS ROWS.
-        for (var i = 0; i < data[key].length; i++) {
-
-            tr = table.insertRow(-1);
-
-            for (var j = 0; j < col.length; j++) {
-                var tabCell = tr.insertCell(-1);
-                tabCell.innerHTML = data[col[j]][i].toFixed(2);
+        function jsonToTable(data, targetContainer){
+            // The columns will be the dict keys
+            let col = [];
+            for (let key in data) {
+                col.push(key);
             }
-        }
-        targetContainer.innerHTML = "";
-        targetContainer.appendChild(table);
-    }
 
+            let table = document.createElement("table");
 
-    function getSubstInfo() {
-        var subst = document.getElementById("sel-substance").value;
-        var divContainer = document.getElementById("critical-table");
-        var server_data = {"subst": subst};
-
-        $.ajax({
-            type: "POST",
-            url: "/subst_info",
-            data: JSON.stringify(server_data),
-            contentType: "application/json",
-            dataType: 'json',
-            success: function(result) {
-                console.log("Result:");
-                console.log(result);
-                crit_pt = result;
-                jsonToTable(crit_pt, divContainer);
+            // The header will be the keys
+            let tr = table.insertRow(-1);
+            for (let i = 0; i < col.length; i++) {
+                let th = document.createElement("th");
+                th.innerHTML = col[i];
+                tr.appendChild(th);
             }
-        });
-        $.ajax({
-            type: "POST",
-            url: "/steam_dome",
-            data: JSON.stringify(server_data),
-            contentType: "application/json",
-            dataType: 'json',
-            success: function(result) {
-                console.log("Result:");
-                console.log(result);
-                steam_dome = result;
-                // generate_plot()
-            }
-        });
-        $.ajax({
-            type: "POST",
-            url: "/isobars",
-            data: JSON.stringify(server_data),
-            contentType: "application/json",
-            dataType: 'json',
-            success: function(result) {
-                console.log("Result:");
-                console.log(result);
-                isobar = result;
-                generate_plot();
-            }
-        });
-        var infoContainer = document.getElementById("subst-info");
-        infoContainer.style.display = "block";
-        var plotContainer = document.getElementById("testplot");
-        plotContainer.style.display = "block";
-    }
 
-    function generate_plot() {
-        var plotobj = document.getElementById('testplot');
-
-        if (x_prop == 'v'){
-            x_scale = 'log';
-        } else {
-            x_scale = 'linear';
-        }
-        if (y_prop == 'p'){
-            y_scale = 'log';
-        } else {
-            y_scale = 'linear';
-        }
-
-        var layout = {
-            xaxis: {
-                type: x_scale,
-                autorange: true
-            },
-            yaxis: {
-                type: y_scale,
-                autorange: true
-            },
-            margin: { t: 0 }
-        };
-
-        data = [
-            {
-                x: crit_pt[x_prop],
-                y: crit_pt[y_prop],
-                name: 'critical point'
-            },
-            {
-                x: steam_dome[0][x_prop].concat(steam_dome[1][x_prop].reverse()),
-                y: steam_dome[0][y_prop].concat(steam_dome[1][y_prop].reverse()),
-                name: 'steam dome',
-                line: {
-                    color: 'rgb(0, 0, 0)',
-                    width: 3
-                }
-            },
-            {
-                x: isobar[x_prop],
-                y: isobar[y_prop],
-                name: 'isobar',
-                line: {
-                    color: 'rgb(0, 155, 0)',
-                    width: 3
+            // the data fill the rows
+            for (let i = 0; i < data[Object.keys(data)[0]].length; i++) {
+                tr = table.insertRow(-1);
+                for (let j = 0; j < col.length; j++) {
+                    let tabCell = tr.insertCell(-1);
+                    tabCell.innerHTML = data[col[j]][i].toFixed(2);
                 }
             }
-        ]
+            // Add it to the HTML document
+            targetContainer.innerHTML = "";
+            targetContainer.appendChild(table);
+        }
 
-        Plotly.newPlot( plotobj, data, layout);
-    }
+
+        function changeSubstance() {
+            let subst = document.getElementById("sel-substance").value;
+            let divContainer = document.getElementById("critical-table");
+            let server_data = {"subst": subst};
+            points = undefined;
+
+            $.ajax({
+                type: "POST",
+                url: "/critical",
+                data: JSON.stringify(server_data),
+                contentType: "application/json",
+                dataType: 'json',
+                success: function(result) {
+                    console.log("Critical:");
+                    crit_pt = result;
+                    jsonToTable(crit_pt, divContainer);
+                }
+            });
+            $.ajax({
+                type: "POST",
+                url: "/steam_dome",
+                data: JSON.stringify(server_data),
+                contentType: "application/json",
+                dataType: 'json',
+                success: function(result) {
+                    console.log("Steam Dome:");
+                    steam_dome = result;
+                    for (let key in steam_dome[1]){
+                        steam_dome[1][key].reverse();
+                    }
+                }
+            });
+            $.ajax({
+                type: "POST",
+                url: "/isobars",
+                data: JSON.stringify(server_data),
+                contentType: "application/json",
+                dataType: 'json',
+                success: function(result) {
+                    console.log("Isobars:");
+                    isobars = result;
+                    redrawPlot();
+                }
+            });
+            let infoContainer = document.getElementById("subst-info");
+            infoContainer.style.display = "block";
+            let plotContainer = document.getElementById("testplot");
+            plotContainer.style.display = "block";
+        }
+
+        function addPoint() {
+            let subst = document.getElementById("sel-substance").value;
+
+            let T = Math.floor(Math.random() * 1000) + 1;
+            let s = Math.floor(Math.random() * 10) + 0.1;
+
+            let server_data = {"subst": subst, "T": T, "s": s};
+
+            $.ajax({
+                type: "POST",
+                url: "/point",
+                data: JSON.stringify(server_data),
+                contentType: "application/json",
+                dataType: 'json',
+                success: function(result) {
+                    console.log("Add Point:");
+                    if (points == undefined){
+                        points = result;
+                    } else {
+                        for (let key in points){
+                            points[key].push(result[key][0]);
+                        }
+                    }
+                    let divContainer = document.getElementById("point-table");
+                    jsonToTable(points, divContainer);
+                    redrawPlot();
+                },
+                error: function(error) {
+
+                }
+            });
+        }
+
+        function redrawPlot() {
+            let plotobj = document.getElementById('testplot');
+
+            let x_scale;
+            let y_scale;
+
+            if (x_prop == 'v'){
+                x_scale = 'log';
+            } else {
+                x_scale = 'linear';
+            }
+            if (y_prop == 'p'){
+                y_scale = 'log';
+            } else {
+                y_scale = 'linear';
+            }
+
+            let layout = {
+                xaxis: {
+                    type: x_scale,
+                    autorange: true
+                },
+                yaxis: {
+                    type: y_scale,
+                    autorange: true
+                },
+                margin: { t: 0 }
+            };
+
+            let data = [];
+            // add the critical point
+            data.push({
+                    x: crit_pt[x_prop],
+                    y: crit_pt[y_prop],
+                    name: 'critical point'
+            });
+            // add isobars
+            isobars.forEach(addLine);
+            function addLine(isobar){
+                data.push({
+                    x: isobar[x_prop],
+                    y: isobar[y_prop],
+                    text: isobar['p'][0],
+                    showlegend: false,
+                    line: {
+                        color: 'rgb(0, 155, 0)',
+                        width: 3
+                    }
+                });
+            }
+            if (points != undefined){
+            // add points
+                data.push({
+                    x: points[x_prop],
+                    y: points[y_prop],
+                    mode: 'markers',
+                    marker:{
+                        size: 5,
+                    },
+                    showlegend: false,
+                });
+            }
+
+            // add the steam dome
+            data.push({
+                    x: steam_dome[0][x_prop].concat(steam_dome[1][x_prop]),
+                    y: steam_dome[0][y_prop].concat(steam_dome[1][y_prop]),
+                    showlegend: false,
+                    line: {
+                        color: 'rgb(0, 0, 0)',
+                        width: 3
+                    }
+            });
+
+
+
+
+            Plotly.newPlot( plotobj, data, layout);
+        }
     </script>
 
 {% endblock %}

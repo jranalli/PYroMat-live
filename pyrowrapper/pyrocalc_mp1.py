@@ -2,6 +2,23 @@ import numpy as np
 import pyromat as pm
 
 
+def get_default_lines(subst, prop=None, n=5, scaling='linear'):
+    if prop == 'p':
+        pmin = subst.triple()[1]
+        pmax = subst.plim()[1]
+        peps = (pmax-pmin)/1000
+        if scaling == 'linear':
+            vals = np.linspace(pmin + peps, pmax - peps, n)
+        elif scaling == 'log':
+            vals = np.logspace(np.log10(pmin + peps),
+                               np.log10(pmax - peps),
+                               n)
+        return vals
+    else:
+        raise pm.utility.PMParamError('Default lines not available for'
+                                      '{}.'.format(prop))
+
+
 def _validate(state_dict):
     if len(state_dict) == 2:
         pass
@@ -16,7 +33,6 @@ def _validate(state_dict):
 
 
 def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
-    # TODO handle vector of inputs?
     crit = compute_critical(subst)
     pmin, pmax = subst.plim()
     Tmin, Tmax = subst.Tlim()
