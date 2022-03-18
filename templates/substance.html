@@ -23,15 +23,23 @@
     <div id="testplot" style="width:600px;height:400px;"></div>
     Specified Points
     <p id="point-table"></p>
-    <script>
 
+
+
+    <script>
+        // Global Vars
+        // Data holders
         var crit_pt;
         var steam_dome;
         var isobars;
-        var x_prop = 's';
-        var y_prop = 'T';
         var points;
 
+        // Plot controls
+        var x_prop = 's';
+        var y_prop = 'T';
+
+
+        // Convert a JSON dict of arrays to a table
         function jsonToTable(data, targetContainer){
             // The columns will be the dict keys
             let col = [];
@@ -41,7 +49,7 @@
 
             let table = document.createElement("table");
 
-            // The header will be the keys
+            // Fill the header with keys
             let tr = table.insertRow(-1);
             for (let i = 0; i < col.length; i++) {
                 let th = document.createElement("th");

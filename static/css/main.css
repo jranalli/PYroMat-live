@@ -11,5 +11,7 @@ h3 {
 }
 
 th, td {
-    padding: 10pt
+    padding-left: 10pt;
+    padding-right: 10pt;
+    padding-top: 2pt;
 }

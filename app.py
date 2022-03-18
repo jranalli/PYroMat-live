@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request
 import json
-from collections import OrderedDict
 
 import pyromat as pm
 from pyrowrapper import pyrocalc_mp1 as calc
