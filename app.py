@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request
+import flask
+from flask import Flask, render_template, request, jsonify
 import json
 
 import pyromat as pm
@@ -45,23 +46,28 @@ def isobars():
 @app.route('/point', methods=['POST'])
 def point():
     json_data = request.get_json()
-    subst = pm.get('mp.'+json_data.pop('subst'))
+    subst = pm.get('mp.'+json_data['subst'])
 
-    # Fake a random point
-    import random
-    tlim = subst.Tlim()
-    plim = subst.plim()
-    slim = subst.s(tlim[0]+10,plim[1]-10), subst.s(tlim[1]-10,plim[0]+10)
-    T = random.randrange(int(tlim[0]), int(tlim[1]))
-    s = random.randrange(int(slim[0]), int(slim[1]))
+    props = json_data['props']
 
-    print("T: {}, s: {}.".format(json_data['T'], json_data['s']))
-    print("T: {}, s: {}.".format(T, s))
     try:
-        data = calc.compute_state(subst, T=T, s=s)
+        data = calc.compute_state(subst, **props)
         return json.dumps(data, cls=NumpyArrayEncoder)
-    except:
-        return "whoops", 500
+    except pm.utility.PMParamError as e:
+        try:
+            errdata = {'message': str(e).split(":")[1].strip(),}
+        except:
+            errdata = {'message': str(e),}
+        return json.dumps(errdata), 500
+
+
+@app.route('/getunits')
+def getunits():
+    length = list(pm.units.length.get())
+    pressure = list(pm.units.pressure.get())
+    data = {'length': length,
+            'pressure': pressure}
+    return json.dumps(data)
 
 
 @app.route('/')

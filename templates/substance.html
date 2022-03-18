@@ -8,21 +8,39 @@
             {% endfor %}
         </select>
         <button id="btnDetails" onclick="changeSubstance();">Details</button>
-        <button id="btnAddPt" onclick="addPoint();">Add Point</button>
     </div>
+    <br>
+    <div id="Point Entry Form">
+    <form>
+        <label for="T">Temperature:</label>
+        <input type="number" id="T" value="300">
+        <br>
+        <label for="p">Pressure:</label>
+        <input type="number" id="p" value="2">
+        <br>
+        <label for="s">Entropy:</label>
+        <input type="number" id="s" value="1">
+        <br>
+        <input type="button" value="Add Point" id = "submit"
+           onClick = "addPoint()">
+    </form>
+    </div>
+
     <br>
 
     <br><br>
     <div id="subst-info">
-      <h3>Results</h3>
+        <h3>Results</h3>
         Critical Point Properties
         <p id="critical-table"></p>
-      <br>
-    </div>
+        <br>
 
-    <div id="testplot" style="width:600px;height:400px;"></div>
-    Specified Points
-    <p id="point-table"></p>
+        <div id="testplot" style="width:600px;height:400px;"></div>
+
+        Specified Points
+        <p id="point-table"></p>
+
+    </div>
 
 
 
@@ -124,10 +142,14 @@
         function addPoint() {
             let subst = document.getElementById("sel-substance").value;
 
-            let T = Math.floor(Math.random() * 1000) + 1;
-            let s = Math.floor(Math.random() * 10) + 0.1;
+            let Tval = document.getElementById("T").valueAsNumber;
+            let sval = document.getElementById("s").valueAsNumber;
+            let pval = document.getElementById("p").valueAsNumber;
 
-            let server_data = {"subst": subst, "T": T, "s": s};
+            let server_data = {
+                "subst": subst,
+                "props":{"T": Tval, "s": sval, "p": pval}
+            };
 
             $.ajax({
                 type: "POST",
@@ -135,12 +157,12 @@
                 data: JSON.stringify(server_data),
                 contentType: "application/json",
                 dataType: 'json',
-                success: function(result) {
+                success: function (result) {
                     console.log("Add Point:");
-                    if (points == undefined){
+                    if (points == undefined) {
                         points = result;
                     } else {
-                        for (let key in points){
+                        for (let key in points) {
                             points[key].push(result[key][0]);
                         }
                     }
@@ -148,8 +170,8 @@
                     jsonToTable(points, divContainer);
                     redrawPlot();
                 },
-                error: function(error) {
-
+                error: function (request) {
+                    alert("Error\n" + JSON.parse(request.responseText).message);
                 }
             });
         }

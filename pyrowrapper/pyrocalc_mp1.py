@@ -24,7 +24,7 @@ def _validate(state_dict):
         pass
     else:
         for key in state_dict.copy():
-            if np.isnan(state_dict[key]):
+            if state_dict[key] is None or np.isnan(state_dict[key]):
                 state_dict.pop(key)
         if len(state_dict) != 2:
             raise pm.utility.PMParamError("Must specify exactly two properties"
@@ -303,11 +303,11 @@ def compute_state(subst, **kwargs):
         s = np.array(kwargs['s']).flatten()
         d = subst.d_s(T=T, s=s)
         p = subst.p(T=T, d=d)
-        T, x = subst.T_s(p=p, s=s, quality=True)
+        _, x = subst.T_s(p=p, s=s, quality=True)
         if x > 0:  # check if saturated
-            h, s, d = subst.hsd(T=T, x=x)
+            h, _, d = subst.hsd(T=T, x=x)
         else:
-            h, s, d = subst.hsd(p=p, T=T)
+            h, _, d = subst.hsd(p=p, T=T)
         v = 1 / d
         p = subst.p(T=T, d=d)
         e = subst.e(d=d, p=p)
