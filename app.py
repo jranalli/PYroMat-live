@@ -11,6 +11,13 @@ app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
 
 
+def encodelist(datalist):
+    return [encodedict(item) for item in datalist]
+
+def encodedict(datadict):
+    return {k: datadict[k].tolist() for k in datadict}
+
+
 @app.route('/critical', methods=['POST'])
 def get_info():
     json_data = request.get_json()
@@ -29,10 +36,14 @@ def steam_dome():
     return json.dumps(data, cls=NumpyArrayEncoder)
 
 
-@app.route('/isobars', methods=['POST'])
+@app.route('/isobars', methods=['GET', 'POST'])
 def isobars():
-    json_data = request.get_json()
-    subst = pm.get('mp.'+json_data['subst'])
+    if request.method == 'GET':
+        args = dict(request.args)
+        subst = pm.get('mp.'+args['id'])
+    elif request.method == 'POST':
+        json_data = request.get_json()
+        subst = pm.get('mp.'+json_data['subst'])
     ps = calc.get_default_lines(subst, 'p', scaling='log')
     data = []
     for p in ps:
@@ -40,7 +51,31 @@ def isobars():
             data.append(calc.compute_iso_line(subst, p=p))
         except pm.utility.PMParamError:
             pass
-    return json.dumps(data, cls=NumpyArrayEncoder)
+    if request.method == 'POST':
+        return json.dumps(data, cls=NumpyArrayEncoder)
+    else:
+        outdata = {
+            'id': args['id'],
+            'data': encodelist(data)
+        }
+        return outdata
+
+@app.route('/isobars_get', methods=['GET'])
+def isobars_get():
+    args = dict(request.args)
+    subst = pm.get('mp.'+args['id'])
+    ps = calc.get_default_lines(subst, 'p', scaling='log')
+    data = []
+    for p in ps:
+        try:
+            data.append(calc.compute_iso_line(subst, p=p))
+        except pm.utility.PMParamError:
+            pass
+    outdata = {
+        'id': args['id'],
+        'data': encodelist(data)
+    }
+    return outdata
 
 
 @app.route('/point', methods=['POST'])
