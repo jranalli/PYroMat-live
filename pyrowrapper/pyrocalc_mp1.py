@@ -289,7 +289,7 @@ def compute_state(subst, **kwargs):
         T = np.array(kwargs['t']).flatten()
         h, s, d, x = subst.hsd(p=p, T=T, quality=True)
         if T.shape != p.shape:
-            T = np.broadcast_to(T, p.shape)
+            T, p = np.broadcast_arrays(T, p)
         v = 1/d
         e = subst.e(d=d, p=p)
     elif 'p' in kwargs and 's' in kwargs:
