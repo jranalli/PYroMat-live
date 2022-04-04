@@ -1,8 +1,11 @@
 import numpy as np
 import pyromat as pm
 
+VALID_PROPS = ['T', 'p', 's', 'd', 'v', 'h', 'e', 's', 'x']
+
 
 def get_default_lines(subst, prop=None, n=5, scaling='linear'):
+    # TODO make this make sense. Perhaps build upon _interval from pyrodoc
     if prop == 'p':
         pmin = subst.triple()[1]
         pmax = subst.plim()[1]
@@ -13,26 +16,23 @@ def get_default_lines(subst, prop=None, n=5, scaling='linear'):
             vals = np.logspace(np.log10(pmin + peps),
                                np.log10(pmax - peps),
                                n)
+        else:
+            raise ValueError('Invalid scaling.')
         return vals
     else:
         raise pm.utility.PMParamError('Default lines not available for'
                                       '{}.'.format(prop))
 
 
-def _validate(state_dict):
-    if len(state_dict) == 2:
-        pass
-    else:
-        for key in state_dict.copy():
-            if state_dict[key] is None or np.isnan(state_dict[key]):
-                state_dict.pop(key)
-        if len(state_dict) != 2:
-            raise pm.utility.PMParamError("Must specify exactly two properties"
-                                          " to define a state.")
-    return state_dict
-
-
 def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
+    """
+    Compute a constant line for a given property at a given value
+    :param subst: a pyromat substance object
+    :param n: The number of points to compute to define the line
+    :param scaling: Should point spacing be 'linear' or 'log'
+    :param kwargs: A property specified by name
+    :return: A dict containing arrays of properties
+    """
     crit = compute_critical(subst)
     pmin, pmax = subst.plim()
     Tmin, Tmax = subst.Tlim()
@@ -51,13 +51,13 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
             raise ValueError('Invalid scaling.')
         states = compute_state(subst, T=line_T, p=p)
 
+        # If it intersects the steam dome, insert the saturated points
         if p < crit['p']:
             Tsat = subst.Ts(p=p)
             f, g = compute_sat_state(subst, T=Tsat)
             i_insert = np.argmax(states['T'] > Tsat)
             for key in f:
-                states[key] = np.insert(states[key],
-                                        i_insert,
+                states[key] = np.insert(states[key], i_insert,
                                         np.array([f[key], g[key]]).flatten())
 
     elif "T" in kwargs:
@@ -76,6 +76,7 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
         states = compute_state(subst, p=line_p, T=T)
 
+        # If it intersects the steam dome, insert the saturated points
         if T < crit['T']:
             psat = subst.ps(T=T)
 
@@ -98,6 +99,7 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
         else:
             raise ValueError('Invalid scaling.')
 
+        # TODO compare speed on Ts and Ps
         states = compute_state(subst, p=line_p, s=s)
 
         #  TODO Identify quality crossovers to insert a state?
@@ -144,12 +146,23 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
 
 def compute_steamdome(subst, n=25, scaling='linear'):
+    """
+    A shortcut for computing the entire steam dome
+    :param subst: a pyromat substance object
+    :param n: the number of points to compute
+    :param scaling: The scaling to use for the spacing ('linear' or 'log').
+    :return: (satLiqProps, satVapProps) - A full description of the states
+                including all valid properties.
+                Valid properties are: p,T,v,d,e,h,s,x
+    """
     critical = compute_critical(subst)
     Tc = critical['T']
 
+    # Find valid limits
     Tmin = subst.triple()[0]
     Teps = (Tc-Tmin)/1000
 
+    # Generate spacing
     if scaling == 'linear':
         line_T = np.linspace(Tmin, Tc-Teps, n).flatten()
     elif scaling == 'log':
@@ -158,6 +171,8 @@ def compute_steamdome(subst, n=25, scaling='linear'):
         raise ValueError('Invalid scaling.')
 
     sll, svl = compute_sat_state(subst, T=line_T)
+
+    # Append the critical point to the end of both lines
     satliq_states = {}
     satvap_states = {}
     for k in sll:
@@ -168,6 +183,15 @@ def compute_steamdome(subst, n=25, scaling='linear'):
 
 
 def compute_sat_state(subst, **kwargs):
+    """
+    Compute a state given any set of state properties
+    :param subst: A pyromat substance object
+    :param kwargs: The thermodynamic property at which to compute the states
+                        specified by name. e.g. compute_sat_state(water, T=300)
+    :return: (satLiqProps, satVapProps) - A full description of the states
+                including all valid properties.
+                Valid properties are: p,T,v,d,e,h,s,x
+    """
     kwargs = {k.lower(): v for k, v in kwargs.items()}
     if 'p' in kwargs:
         ps = np.array(kwargs['p']).flatten()
@@ -211,7 +235,12 @@ def compute_sat_state(subst, **kwargs):
 
 
 def compute_critical(subst):
-
+    """
+    Return the critical state for a substance
+    :param subst: A pyromat substance object
+    :return: A full description of the state including all valid properties.
+                Valid properties are: p,T,v,d,e,h,s,x
+    """
     Tc, pc, dc = subst.critical(density=True)
     Tc = np.array([Tc])
     pc = np.array([pc])
@@ -235,68 +264,72 @@ def compute_critical(subst):
 
 
 def compute_state(subst, **kwargs):
-    kwargs = _validate(kwargs)
+    """
+    Compute a state given any set of state properties
+    :param subst: A pyromat substance object
+    :param kwargs: Any two thermodynamic properties specified by name. e.g.
+                        compute_state(water, T=300, p=1)
+    :return: A full description of the state including all valid properties.
+                Valid properties are: p,T,v,d,e,h,s,x
+    """
 
-    # Make everything lowercase
+    # Validate the input length
+    if len(kwargs) == 2:
+        pass
+    else:
+        raise pm.utility.PMParamError("Must specify exactly two properties to "
+                                      "define a state.")
+
+    # Make everything lowercase just to allow user mistakes
     kwargs = {k.lower(): v for k, v in kwargs.items()}
 
-    # Which two properties were specified
+    # Determine which two properties were specified
     if 'p' in kwargs and 't' in kwargs:
         p = np.array(kwargs['p']).flatten()
         T = np.array(kwargs['t']).flatten()
         h, s, d, x = subst.hsd(p=p, T=T, quality=True)
-        p = subst.p(T=T, d=d)
         if T.shape != p.shape:
-            T = T.repeat(p.shape)
+            T = np.broadcast_to(T, p.shape)
         v = 1/d
         e = subst.e(d=d, p=p)
     elif 'p' in kwargs and 's' in kwargs:
         p = np.array(kwargs['p']).flatten()
         s = np.array(kwargs['s']).flatten()
         T, x = subst.T_s(p=p, s=s, quality=True)
-
-        d = np.zeros_like(x)
-        s = np.zeros_like(x)
-        h = np.zeros_like(x)
-        Isat = x > 0
-        # Sat points
+        d, s, h = np.zeros_like([x, x, x])
+        # pts under steam dome
+        Isat = x > -1
         h[Isat], s[Isat], d[Isat] = subst.hsd(T=T[Isat], x=x[Isat])
-        # Not Sat points
+        # pts outside steam dome
         Insat = np.logical_not(Isat)
         h[Insat], s[Insat], d[Insat] = subst.hsd(p=p[Insat], T=T[Insat])
         v = 1 / d
-        e = subst.e(d=d, T=T)
+        e = subst.e(d=d, p=p)
     elif 'p' in kwargs and 'h' in kwargs:
         p = np.array(kwargs['p']).flatten()
         h = np.array(kwargs['h']).flatten()
         T, x = subst.T_h(p=p, h=h, quality=True)
-
-        d = np.zeros_like(x)
-        s = np.zeros_like(x)
-        h = np.zeros_like(x)
-        Isat = x > 0
+        d, s, h = np.zeros_like([x, x, x])
+        # pts under steam dome
+        Isat = x > -1
         h[Isat], s[Isat], d[Isat] = subst.hsd(T=T[Isat], x=x[Isat])
+        # pts outside steam dome
         Insat = np.logical_not(Isat)
         h[Insat], s[Insat], d[Insat] = subst.hsd(p=p[Insat], T=T[Insat])
         v = 1 / d
-        # p = subst.p(T=T, d=d)
         e = subst.e(d=d, p=p)
     elif 'p' in kwargs and 'v' in kwargs:
         p = np.array(kwargs['p']).flatten()
         v = np.array(kwargs['v']).flatten()
-
         d = 1 / v
-        h, _, _ = subst.hsd(p=p, d=d)
+        # Duplicate with p & d
+        return compute_state(subst, p=p, d=d)
+    elif 'p' in kwargs and 'd' in kwargs:
+        p = np.array(kwargs['p']).flatten()
+        d = np.array(kwargs['d']).flatten()
+        h, s, _ = subst.hsd(p=p, d=d)
         T, x = subst.T_h(p=p, h=h, quality=True)
-        d = np.zeros_like(x)
-        s = np.zeros_like(x)
-        h = np.zeros_like(x)
-        Isat = x > 0
-        h[Isat], s[Isat], d[Isat] = subst.hsd(T=T[Isat], x=x[Isat])
-        Insat = np.logical_not(Isat)
-        h[Insat], s[Insat], d[Insat] = subst.hsd(p=p[Insat], T=T[Insat])
         v = 1 / d
-        p = subst.p(T=T, d=d)
         e = subst.e(d=d, p=p)
     elif 't' in kwargs and 's' in kwargs:
         T = np.array(kwargs['t']).flatten()
@@ -304,12 +337,14 @@ def compute_state(subst, **kwargs):
         d = subst.d_s(T=T, s=s)
         p = subst.p(T=T, d=d)
         _, x = subst.T_s(p=p, s=s, quality=True)
-        if x > 0:  # check if saturated
-            h, _, d = subst.hsd(T=T, x=x)
-        else:
-            h, _, d = subst.hsd(p=p, T=T)
+        d, s, h = np.zeros_like([x, x, x])
+        # pts under steam dome
+        Isat = x > -1
+        h[Isat], s[Isat], d[Isat] = subst.hsd(T=T[Isat], x=x[Isat])
+        # pts outside steam dome
+        Insat = np.logical_not(Isat)
+        h[Insat], s[Insat], d[Insat] = subst.hsd(p=p[Insat], T=T[Insat])
         v = 1 / d
-        p = subst.p(T=T, d=d)
         e = subst.e(d=d, p=p)
     elif 't' in kwargs and 'h' in kwargs:
         T = np.array(kwargs['t']).flatten()
@@ -319,24 +354,25 @@ def compute_state(subst, **kwargs):
         T = np.array(kwargs['t']).flatten()
         v = np.array(kwargs['v']).flatten()
         d = 1 / v
+        return compute_state(subst, T=T, d=d)
+    elif 't' in kwargs and 'd' in kwargs:
+        T = np.array(kwargs['t']).flatten()
+        d = np.array(kwargs['d']).flatten()
         p = subst.p(T=T, d=d)
-        T = subst.T(p=p, d=d)
-        if T < subst.critical()[0]:
-            ds = subst.ds(T=T)
-            x = (1 / d - 1 / ds[0]) / (1 / ds[1] - 1 / ds[0])
-        else:
-            x = -1
-        if 0 < x <= 1:
-            h, s, d = subst.hsd(T=T, x=x)
-        else:
-            h, s, d, x = subst.hsd(p=p, T=T, quality=True)
+        x, s, h = np.zeros_like([d, d, d])
+        # Deal with the steam dome
+        Isat = T < subst.critical()[0]
+        ds = subst.ds(T=T[Isat])
+        x[Isat] = (1 / d[Isat] - 1 / ds[0]) / (1 / ds[1] - 1 / ds[0])
+        h[Isat], s[Isat], d[Isat] = subst.hsd(T=T[Isat], x=x[Isat])
+        Insat = np.logical_not(Isat)
+        x[Insat] = -1
+        h[Insat], s[Insat], d[Insat] = subst.hsd(p=p[Insat], T=T[Insat])
         v = 1 / d
-        p = subst.p(T=T, d=d)
         e = subst.e(d=d, p=p)
     elif 't' in kwargs and 'x' in kwargs:
         T = np.array(kwargs['t']).flatten()
         x = np.array(kwargs['x']).flatten()
-
         p = subst.ps(T=T)
         h, s, d = subst.hsd(T=T, x=x)
         e = subst.e(d=d, p=p)
@@ -344,7 +380,6 @@ def compute_state(subst, **kwargs):
     elif 'p' in kwargs and 'x' in kwargs:
         p = np.array(kwargs['p']).flatten()
         x = np.array(kwargs['x']).flatten()
-
         T = subst.Ts(p=p)
         h, s, d = subst.hsd(T=T, x=x)
         e = subst.e(d=d, p=p)
@@ -352,6 +387,7 @@ def compute_state(subst, **kwargs):
     else:
         raise pm.utility.PMParamError("Property pair not permitted.")
 
+    # Generate a state object
     state = {
             'T': T,
             'p': p,
