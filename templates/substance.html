@@ -254,7 +254,53 @@
 
 
             Plotly.newPlot( plotobj, data, layout);
+
+        Number.prototype.between = function(min, max) {
+          return this >= min && this <= max;
+      };
+        let myPlot = plotobj;
+        d3.select(".plotly").on('click', function(d, i) {
+            var e = d3.event;
+            var bgrect = document.getElementsByClassName('gridlayer')[0].getBoundingClientRect();
+            var x = ((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0];
+            var y = ((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1];
+            if (x.between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]) &&
+                y.between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1])) {
+                let subst = document.getElementById("sel-substance").value;
+
+                let server_data = {
+                    "subst": subst,
+                    "props":{"T": y, "s": x}
+                };
+
+                $.ajax({
+                    type: "POST",
+                    url: "/point",
+                    data: JSON.stringify(server_data),
+                    contentType: "application/json",
+                    dataType: 'json',
+                    success: function (result) {
+                        console.log("Add Point:");
+                        if (points == undefined) {
+                            points = result;
+                        } else {
+                            for (let key in points) {
+                                points[key].push(result[key][0]);
+                            }
+                        }
+                        let divContainer = document.getElementById("point-table");
+                        jsonToTable(points, divContainer);
+                        redrawPlot();
+                    },
+                    error: function (request) {
+                        alert("Error\n" + JSON.parse(request.responseText).message);
+                    }
+                });
+          }
+      });
         }
+
+
     </script>
 
 {% endblock %}

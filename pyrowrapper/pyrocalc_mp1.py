@@ -277,8 +277,15 @@ def compute_state(subst, **kwargs):
     if len(kwargs) == 2:
         pass
     else:
-        raise pm.utility.PMParamError("Must specify exactly two properties to "
-                                      "define a state.")
+        mkwargs = kwargs.copy()
+        for key in kwargs:
+            if mkwargs[key] is None or np.isnan(mkwargs[key]):
+                mkwargs.pop(key)
+        if len(mkwargs) == 2:
+            return compute_state(subst, **mkwargs)
+        else:
+            raise pm.utility.PMParamError("Must specify exactly two properties"
+                                          " to define a state.")
 
     # Make everything lowercase just to allow user mistakes
     kwargs = {k.lower(): v for k, v in kwargs.items()}
