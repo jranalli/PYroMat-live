@@ -1,0 +1,59 @@
+<html>
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.11.0.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="../static/script.js" type="text/javascript"></script>
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
+</head>
+<body>
+<div id="controls">
+    <div id="unit_controls">
+        <input type="button" id="unit_hide" value="Units"/>
+        <ul id="hideablelist" style="display: none">
+            <form id="unitform">
+                <!--  Will be filled in by JS -->
+            </form>
+            <input type="button" id="unit_apply" value="Apply" style="display: none"/>
+            <input type="button" id="unit_revert" value="Revert" style="display: none"/>
+        </ul>
+    </div>
+
+
+
+
+    <div id="substance_controls">
+        <label>Select Substance: </label>
+        <select id="sel_substance">
+            <!-- Populated by JS -->
+        </select>
+    </div>
+
+    <div id="property_controls">
+        <input type="button" id="propchoice_hide" value="Show Props"/>
+        <ul id="propchecks" style="display: none">
+        </ul>
+        <form id="propform">
+        <table id="propinput">
+<th>T</th><th>p</th> <th>d</th> <th>h</th> <th>s</th>
+                <button type="button" id="get_props">Change Content - GET</button>
+                <button type="button" id="post_props">Change Content - POST</button>
+
+        </table>
+            </form>
+    </div>
+</div>
+<div id="outputs">
+    <div id="property_display">
+        <table id="proptable">
+            <!-- Populated by JS -->
+        </table>
+    </div>
+    <div id="plot" style="width:600px;height:400px;">
+        <!-- Will be filled in by JS -->
+    </div>
+</div>
+</body>
+</html>
