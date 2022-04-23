@@ -360,8 +360,8 @@ def meta():
 # ##### /static/index.html
 @app.route('/<string:page_name>/')
 def render_static(page_name):
-    if not app.debug:
-        flask.abort(404)
+    #if not app.debug:
+    #    flask.abort(404)
     return app.send_static_file('%s.html' % page_name)
 
 
