@@ -77,19 +77,24 @@ class PointModel extends Subject{
     // Several event IDs thrown by this
     static EVENT_UNIT = 'unit'; // Data will be get_unit()
     static EVENT_SUBSTANCE = 'substance'; // Data will be get_substance()
-    static EVENT_POINT = 'point' // Data will be get_points()
-    static EVENT_INIT = 'init'; // Data will be null
+    static EVENT_POINT_ADD = 'point_add' // Data will be the added point
+    static EVENT_POINT_DELETE = 'point_delete' // Data will be id of deleted point
+    static EVENT_INIT_POINTS = 'init_pts'; // Data will be null
+    static EVENT_INIT_AUXLINE = 'init_aux'; // Data will be null
+    static EVENT_AUXLINE_ADD = 'auxline_add'; // data will be the added line
+    static EVENT_AUXLINE_DELETE = 'auxline_del'; // data will be the id of the deleted line
 
     DEFAULT_SUB_SHORTLIST=["mp.H2O","mp.C2H2F4","ig.air","ig.O2", "ig.N2"];
     DEFAULT_PROP_SHORTLIST=["T","p","v","e","h","s","x"];
-    DEFAULT_SUBSTANCE = 'mp.H2O'
-    INIT_ID = 1
+    DEFAULT_SUBSTANCE = 'mp.H2O';
+    INIT_PT_ID = 1;
+    INIT_AUX_ID = 1;
 
     constructor() {
         super();
-        // Current list of defined points
-        this.points = []
-        this.point_id = this.INIT_ID;
+        // Init this.points and this.auxlines
+        this.init_auxlines();
+        this.init_points();
 
         // Current units, and all possible units
         this.units = null;
@@ -108,9 +113,41 @@ class PointModel extends Subject{
      *                             substance id, values are a dict with info
      *                             from PMGI
      */
-    init(valid_units, valid_substances){
+    init_info(valid_units, valid_substances){
         this.valid_units = valid_units;
         this.valid_substances = valid_substances;
+    }
+
+    /**
+     * Clear all auxiliary lines stored and get ready to start over
+     */
+    init_auxlines() {
+        this.aux_id = this.INIT_AUX_ID;
+        this.aux_lines = {}
+        this.aux_lines['global'] = []
+
+        this.notify(this, PointModel.EVENT_INIT_AUXLINE, null);
+    }
+
+    /**
+     * Clear all points stored and get ready to start over.
+     */
+    init_points(){
+        this.points = {};
+        this.point_id = this.INIT_PT_ID;
+
+        let keys = this.get_output_properties();
+        keys.push('ptid');
+        keys.forEach((key) =>{
+             this.points[key] = [];
+        });
+
+        // Keep the global aux lines (i.e. assume substance constant)
+        let gl = this.aux_lines['global'];
+        this.aux_lines = {};
+        this.aux_lines['global'] = gl;
+
+        this.notify(this, PointModel.EVENT_INIT_POINTS, null);
     }
 
     /**
@@ -120,7 +157,9 @@ class PointModel extends Subject{
      */
     set_units(units){
         this.units = units;
-        this.clearpoints();
+        // Reset everything
+        this.init_auxlines();
+        this.init_points();
         this.notify(this, PointModel.EVENT_UNIT, this.get_units())
     }
 
@@ -130,10 +169,11 @@ class PointModel extends Subject{
      */
     set_substance(substance){
         if (!substance in this.valid_substances){
-            throw new Error("No a valid substance");
+            throw new Error("Not a valid substance");
         }
         this.substance = substance;
-        this.clearpoints();
+        this.init_auxlines();
+        this.init_points();
         this.notify(this, PointModel.EVENT_SUBSTANCE, this.get_substance())
     }
 
@@ -143,34 +183,11 @@ class PointModel extends Subject{
      *                             values are arrays of legal values
      */
     get_valid_units(){
-        return this.valid_units;
-    }
-
-    /**
-     * Get all valid substance data
-     * @returns valid_substances - dict of valid substances, keys are the
-     *                              substance id, values are a dict with info
-     *                              from PMGI
-     */
-    get_valid_substances(){
-        return this.valid_substances;
-    }
-
-
-    /**
-     * Return the properties possible for the current substance
-     * @returns {*} array of properties represented by strings
-     */
-    get_valid_properties(){
-        return this.valid_substances[this.substance]['props'];
-    }
-
-    /**
-     * Returns the input properties possible for the current substance
-     * @returns {*} array of properties represented by strings
-     */
-    get_input_properties(){
-        return this.valid_substances[this.substance]['inputs'];
+        if (this.valid_units != null) {
+            return this.valid_units;
+        } else {
+            return [];
+        }
     }
 
     /**
@@ -183,13 +200,47 @@ class PointModel extends Subject{
     }
 
     /**
+     * Get all valid substance data
+     * @returns valid_substances - dict of valid substances, keys are the
+     *                              substance id, values are a dict with info
+     *                              from PMGI
+     */
+    get_valid_substances(){
+        return this.valid_substances;
+    }
+
+    /**
+     * Return the properties possible for the current substance
+     * @returns {*} array of properties represented by strings
+     */
+    get_output_properties(){
+        if (this.valid_substances != null && this.substance != null) {
+            let props = [...this.valid_substances[this.substance]['props']]
+            return props;
+        } else {
+            return [];
+        }
+    }
+
+    /**
+     * Returns the input properties possible for the current substance
+     * @returns {*} array of properties represented by strings
+     */
+    get_input_properties(){
+        if (this.valid_substances != null && this.substance != null) {
+            return this.valid_substances[this.substance]['inputs'];
+        } else {
+            return [];
+        }
+    }
+
+    /**
      * Returns the current substance set
      * @returns substance - a string with the substance id.
      */
     get_substance(){
         return this.substance;
     }
-
 
     /**
      * Get all currently calculated points
@@ -202,52 +253,95 @@ class PointModel extends Subject{
         return this.points;
     }
 
+
     /**
-     * Add a new point to the list
-     * @param point - A dict keyed by property.
+     * Get all currently computed aux iso lines
+     * @returns lines - dict of arrays, key of parent dict is the parent of
+     *                        the lines being reported ('global' for general
+     *                        lines like the steamdome, etc.). The array values
+     *                        of the dict contain two keys: 'type' and 'data'.
+     *                        The string 'type' represents the property
+     *                        associated with this particular line (e.g. 'p'
+     *                        for an isobar. 'data' is a dict, keyed by
+     *                        property name and whose values are arrays of
+     *                        values making up the whole line.
+     *
+     *                        lines['global'][0]['data']['p'] gets the pressure
+     *                        values for a given line in global at index 0.
      */
-    add_point(point){
-        // If it's new, the keys might not exist yet, initialize array
-        if (this.points.length === 0){
-            this.points = {};
-            this.points['ptid'] = [this.point_id];
-            for (const key in point) {
-                this.points[key] = [point[key]];
-            }
-        } else {
-            this.points['ptid'].push(this.point_id);
-            for (const key in point) {
-                this.points[key].push(point[key]);
-            }
+    get_auxlines(id=null){
+        if (id == null) {
+            return this.aux_lines;
+        } else if (id in this.aux_lines){
+            return {id: this.aux_lines[id]};
         }
-        this.point_id++;
-        this.notify(this, PointModel.EVENT_POINT, this.get_points())
     }
 
     /**
-     * Remove a point based on it's integer id
+     * Add a new point to the list
+     * @param point - A dict keyed by property. An integer ID will be added to
+     *                  the point for internal tracking.
+     */
+    add_point(point){
+        let pt = Object.assign({}, point);  // Copy object
+        pt['ptid'] = this.point_id;  // Append the id to the point
+
+        // Push to the existing array
+        for (const key in pt) {
+            this.points[key].push(pt[key]);
+        }
+        // Increment the id and notify
+        this.point_id++;
+        this.notify(this, PointModel.EVENT_POINT_ADD, pt);
+    }
+
+    /**
+     * Remove a point based on its integer id
      * @param id - the integer id of the point (via 'ptid' property)
      */
     delete_point(id){
+        // Points is a dict keyed by property, with arrays
         let index = this.points['ptid'].indexOf(parseInt(id));
         for (const key in this.points) {
             this.points[key].splice(index, 1);
         }
+        this.delete_auxlines(id);
+
         // If this was the last point, we want to clear things out.
         if (this.points['ptid'].length == 0){
-            this.clearpoints();
+            this.init_points();
         } else {
-            this.notify(this, PointModel.EVENT_POINT, this.get_points());
+            this.notify(this, PointModel.EVENT_POINT_DELETE, id);
         }
     }
 
     /**
-     * Clear all points stored and get ready to start over.
+     * Add a new auxiliary line
+     * @param type - string, iso-property
+     * @param data - dict of property value arrays
+     * @param parent - ptid of parent point being represented, or 'global'
      */
-    clearpoints(){
-        this.points = [];
-        this.point_id = this.INIT_ID;
-        this.notify(this, PointModel.EVENT_INIT, null);
+    add_auxline(type, data, parent='global'){
+        // If it's a new parent, the array might not exist yet, initialize
+        if (!(parent in this.aux_lines)){
+            this.aux_lines[parent] = [];
+        }
+        let line = {'type': type, 'id': this.aux_id, 'data': data};
+        this.aux_id++;
+        this.aux_lines[parent].push(line);
+        this.notify(this, PointModel.EVENT_AUXLINE_ADD, line);
+    }
+
+    /**
+     * * Remove an auxiliary line its parent point integer id
+     * @param id - the integer id of the parent point (via 'ptid' property)
+     */
+    delete_auxlines(id){
+        // Make sure we've computed auxlines for this point first
+        if (id in this.aux_lines){
+            delete this.aux_lines[id];
+            this.notify(this, PointModel.EVENT_AUXLINE_DELETE, id);
+        }
     }
 }
 
@@ -267,7 +361,7 @@ class SubstanceFormView{
 
     update(source, event, data){
         if (event == PointModel.EVENT_SUBSTANCE){
-            this.set_value(data);
+            this.set_value(data);  // Set the current value to the model's state
         }
     }
 
@@ -579,7 +673,7 @@ class PropChooserView extends Subject{
     update(source, event, data) {
         if (event == PointModel.EVENT_SUBSTANCE) {
             let disp_props = this.get_checkbox_values();
-            this.init(get_valid_properties(), disp_props);
+            this.init(get_output_properties(), disp_props);
         }
     }
 
@@ -715,30 +809,79 @@ class PlotView{
         // TODO - Additional background data, steam dome, isolines
         // TODO - variable display props in popups
         // TODO - axis labels, plot quality
-        this.x_prop = 's';
-        this.y_prop = 'T';
         this.dispprops = ['T','s','p','v'];
         this.target = divTarget;
         this.container = document.getElementById(divTarget);
+
+        this.onChangeAxes = this.onChangeAxes.bind(this);
+        $("#yprop").on("change", this.onChangeAxes);
+        $("#xprop").on("change", this.onChangeAxes);
+        this.setAxes('s', 'T')
+
+        this.traces = [];
+
         this.init();
     }
 
     init(){
         this.set_layout();
         // Create the plot trace
-        let traces = [{
+        this.traces = [];
+        this.traces.push({
             x: [],
             y: [],
             customdata: [],
             mode: 'markers',
-            hovertemplate: "<b> Point prop<br>"+
+            name: "User Points",
+            hovertemplate: "<b> Point prop</b><br>"+
                 this.x_prop+": %{x}<br>" +
                 this.y_prop+": %{y}<br>" +
-                "attr: %{customdata: .2f}",
+                "attr: %{customdata}",
             type: 'scatter'
-        }];
+        });
+        this.traces.push({
+            x: [],
+            y: [],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Steam Dome',
+            hovertemplate: " ",
+            showlegend: false,
+            line: {
+                color: 'rgb(0, 0, 0)',
+                width: 3
+            }
+        });
+        this.traces.push({
+            x: [],
+            y: [],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'isolines p',
+            hovertemplate: "<b> Isobar<br></b>"+
+                "p: %{customdata}",
+            showlegend: false,
+            line: {
+                color: 'rgb(0, 100, 0)',
+                width: 1
+            }
+        });
+        this.traces.push({
+            x: [],
+            y: [],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'isolines s',
+            hovertemplate: "<b> Iso-s line<br></b>"+
+                "s: %{customdata}",
+            showlegend: false,
+            line: {
+                color: 'rgb(0, 0, 100)',
+                width: 1
+            }
+        });
         // Create the plot object
-        Plotly.newPlot(this.container, traces, this.layout);
+        Plotly.newPlot(this.container, this.traces, this.layout);
         this.setupPlotClickListener();
     }
 
@@ -748,7 +891,7 @@ class PlotView{
     set_layout(){
         let x_scale;
         let y_scale;
-        if (this.x_prop == 'v'){
+        if (this.x_prop == 'v' || this.x_prop == 'p'){
             x_scale = 'log';
         } else {
             x_scale = 'linear';
@@ -761,10 +904,12 @@ class PlotView{
 
         this.layout = {
             xaxis: {
+                title: this.x_prop,
                 type: x_scale,
                 autorange: true
             },
             yaxis: {
+                title: this.y_prop,
                 type: y_scale,
                 autorange: true
             },
@@ -781,11 +926,28 @@ class PlotView{
         d3.select(".plotly").on('click', function(d, i) {
             var e = d3.event;
             var bgrect = document.getElementsByClassName('gridlayer')[0].getBoundingClientRect();
-            var x = ((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0];
-            var y = ((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1];
-            if (x.between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]) &&
-                y.between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1])) {
+            let x = 0;
+            let y = 0;
+            let betweenx = false;
+            let betweeny = false;
+            // X Axis
+            if (myPlotContainer.layout['xaxis']['type'] == 'linear') {
+                x = ((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0];
+                betweenx = x.between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]);
+            } else if (myPlotContainer.layout['xaxis']['type'] == 'log'){
+                x = 10**(((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0]);
+                betweenx = Math.log10(x).between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]);
+            }
+            // Y Axis (flipped coords)
+            if (myPlotContainer.layout['yaxis']['type'] == 'linear') {
+                y = ((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1];
+                betweeny = y.between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1]);
+            } else if (myPlotContainer.layout['yaxis']['type'] == 'log') {
+                y = 10 ** (((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1]);
+                betweeny = Math.log10(y).between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1]);
+            }
 
+            if (betweenx && betweeny) {
                 // Build the data and send to the controller
                 let formData = {}
                 formData[myPlotContainer.x_prop] = x
@@ -797,14 +959,84 @@ class PlotView{
 
 
     update(source, event, data){
-        if (event == PointModel.EVENT_POINT){
-            this.updatePoints(data);
-        } else if (event == PointModel.EVENT_INIT) {
+        if (event == PointModel.EVENT_POINT_ADD || event == PointModel.EVENT_POINT_DELETE){
+            this.updatePoints(source.get_points());
+        } else if (event == PointModel.EVENT_INIT_POINTS) {
             this.init();
         } else if (event == PropChooserView.EVENT_PROPERTY_VISIBILITY){
             this.dispprops = data;
             this.updatePoints(get_points());
+        } else if (event == PointModel.EVENT_AUXLINE_ADD) {
+            this.draw_auxlines(source.get_auxlines());
         }
+    }
+
+    draw_auxlines(data){
+        let steamdome = null;
+        let isobars = null;
+        let isos = null;
+        data['global'].forEach((line)=>{
+           if (line['type'] == 'steamdome'){
+               steamdome = line['data'];
+           } else if (line['type'] == 'p'){
+               if (isobars == null){
+                   isobars = {};
+                   Object.keys(line['data']).forEach((key)=>{
+                            isobars[key] = [];
+                   });
+               }
+               Object.keys(line['data']).forEach((key)=>{
+                            isobars[key] = isobars[key].concat(line['data'][key]);
+                            isobars[key].push(null);
+               });
+           } else if (line['type'] == 's'){
+               if (isos == null){
+                   isos = {};
+                   Object.keys(line['data']).forEach((key)=>{
+                            isos[key] = [];
+                   });
+               }
+               Object.keys(line['data']).forEach((key)=>{
+                            isos[key] = isos[key].concat(line['data'][key]);
+                            isos[key].push(null);
+               });
+           }
+        });
+        if (steamdome != null) {
+            let update = {
+                x: [steamdome[this.x_prop]],
+                y: [steamdome[this.y_prop]],
+            };
+            Plotly.restyle(this.container, update, [1]);
+        }
+        if (isobars != null) {
+            let update_p = {
+                x: [isobars[this.x_prop]],
+                y: [isobars[this.y_prop]],
+                customdata: [isobars['p']]
+            };
+            Plotly.restyle(this.container, update_p, [2]);
+        }
+        if (isos != null) {
+            let update_s = {
+                x: [isos[this.x_prop]],
+                y: [isos[this.y_prop]],
+                customdata: [isos['s']]
+            };
+            Plotly.restyle(this.container, update_s, [3]);
+        }
+    }
+
+    onChangeAxes(){
+        this.setAxes($('#xprop').val(), $('#yprop').val())
+        this.init();
+        this.draw_auxlines(get_auxlines());
+        this.updatePoints(get_points());
+    }
+
+    setAxes(xprop, yprop){
+        this.x_prop = xprop;
+        this.y_prop = yprop;
     }
 
     /**
@@ -849,7 +1081,7 @@ class PlotView{
                 x: [points[this.x_prop]],
                 y: [points[this.y_prop]],
                 customdata: [customdataset],
-                hovertemplate: "<b> Point %{customdata[0]}<br>" +
+                hovertemplate: "<b> Point %{customdata[0]}</b><br>" +
                     this.x_prop + ": %{x}<br>" +
                     this.y_prop + ": %{y}<br>" +
                     customrows,
@@ -878,7 +1110,6 @@ class TableView{
             this.dispprops.unshift("ptid");// ptid should be in the table but not the prop list
         }
 
-        // Can only init the table the very first time
         if (this.table == null){
             let $tablediv = $(this.target);
             $tablediv.empty();
@@ -922,10 +1153,10 @@ class TableView{
     }
 
     update(source, event, data){
-        if (event == PointModel.EVENT_POINT){
-            this.updatePoints(data);
-        } else if (event == PointModel.EVENT_INIT) {
-            this.init(get_valid_properties());
+        if (event == PointModel.EVENT_POINT_ADD || event == PointModel.EVENT_POINT_DELETE){
+            this.updatePoints(source.get_points());
+        } else if (event == PointModel.EVENT_INIT_POINTS) {
+            this.init(get_output_properties());
         } else if (event == PropChooserView.EVENT_PROPERTY_VISIBILITY) {
             this.columnVisibility(data);
         }
@@ -1010,9 +1241,9 @@ $(document).ready(function(){
     // getInfo is an async request, so use the callback to complete setup.
     getInfo((data)=>{
         // Get the general info data, assign to model
-        pointModel.init(data.valid_units, data.substances);
-        pointModel.set_units(data.units);
-        pointModel.set_substance(pointModel.DEFAULT_SUBSTANCE);
+        pointModel.init_info(data.valid_units, data.substances);
+        set_units(data.units);
+        set_substance(pointModel.DEFAULT_SUBSTANCE);
 
         // Assign views to listen to the main model
         pointModel.addListener(unitFormView);
@@ -1027,10 +1258,10 @@ $(document).ready(function(){
         propChooserView.addListener(plotView);
 
         // Call inits on views now that the properties exist
-        tableView.init(get_valid_properties());
+        tableView.init(get_output_properties());
         unitFormView.init(get_valid_units(), get_units());
         substanceFormView.init(get_valid_substances(), get_substance(), get_display_substances());
-        propChooserView.init(get_valid_properties(), pointModel.DEFAULT_PROP_SHORTLIST);
+        propChooserView.init(get_output_properties(), pointModel.DEFAULT_PROP_SHORTLIST);
         propEntryView.init(get_input_properties());
     });
 });
@@ -1038,9 +1269,9 @@ $(document).ready(function(){
 
 // Passthrough controller functions that get/set on behalf of the model
 
-function get_valid_properties(){
+function get_output_properties(){
     // TODO - consider where this belongs
-    return pointModel.get_valid_properties();
+    return pointModel.get_output_properties();
 }
 
 function get_input_properties(){
@@ -1071,8 +1302,47 @@ function delete_point(point){
     pointModel.delete_point(point)
 }
 
+function get_auxlines(){
+    return pointModel.get_auxlines();
+}
+
 function set_substance(newsubstance){
     pointModel.set_substance(newsubstance);
+    get_auxline();
+}
+
+function get_auxline(){
+    if (get_substance().startsWith('mp')){
+        compute_auxline((data)=>{
+            let sll = data.data['liquid'];
+            let svl = data.data['vapor'];
+            // concatenate vapor to liquid
+            Object.keys(svl).forEach(key => {
+                for (let i = svl[key].length; i > -1; i--) {
+                    sll[key].push(svl[key][i]);
+                }
+            });
+            add_steamdome(sll);
+        });
+    }
+
+    // Compute Auxiliary lines
+    compute_auxline((data)=>{
+        data.data.forEach((line)=>{
+            pointModel.add_auxline('p', line, 'global');
+        });
+    },{"p":0, "default": true});
+
+        // Compute Auxiliary lines
+    compute_auxline((data)=>{
+        data.data.forEach((line)=>{
+            pointModel.add_auxline('s', line, 'global');
+        });
+    },{"s":0, "default": true});
+}
+
+function add_steamdome(steamdome){
+    pointModel.add_auxline('steamdome', steamdome, parent='global');
 }
 
 function get_substance(){
@@ -1085,6 +1355,9 @@ function get_units(){
 
 function set_units(units){
     pointModel.set_units(units);
+    if (get_substance() != null){
+        get_auxline();
+    }
 }
 
 // *********************************************
@@ -1116,6 +1389,39 @@ function compute_point(props, mode="POST"){
             dataType: "json",
             contentType: 'application/json; charset=utf-8',
             success: propResponseSuccess,
+            error: propResponseFail
+        });
+    }
+}
+
+/**
+ * Async request for getting a state from the backend.
+ * @param props - Dict with keys of property and numeric values
+ * @param mode - GET/POST. Only POST can handle units with the request
+ */
+function compute_auxline(callback, props={}, mode="POST"){
+    let requestroute = "";
+    if (Object.keys(props).length == 0) {
+        requestroute = "/saturation";
+    } else {
+        requestroute = "/isoline"
+    }
+
+    // Add the substance ID to props always
+    props['id'] = get_substance();
+
+    if (mode == "GET"){
+        $.get(requestroute, props, callback,dataType='json')
+            .fail(propResponseFail);
+    } else if (mode == "POST") {
+        let postData = {state_input: props, units: get_units()};
+        $.ajax({
+            url: requestroute,
+            type: "POST",
+            data: JSON.stringify(postData),
+            dataType: "json",
+            contentType: 'application/json; charset=utf-8',
+            success: callback,
             error: propResponseFail
         });
     }
