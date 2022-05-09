@@ -14,90 +14,69 @@
         <h3>Unit Selection</h3>
         User can click to show/hide unit selection menu. Units are set using an
         apply/revert modality because multiple of them can be set at once. Changing
-        the units resets everything. Not all units work on the backend.
-        Units only work when using POST<br>
-        <input type="button" id="unit_hide" value="Units"/>
-        <ul id="hideablelist" style="display: none">
-            <form id="unitform">
-                <!--  Will be filled in by JS -->
-            </form>
-            <input type="button" id="unit_apply" value="Apply" style="display: none"/>
-            <input type="button" id="unit_revert" value="Revert" style="display: none"/>
-        </ul>
+        the units resets everything. Units only work when using POST.<br>
+
+        <!--  Will be filled in by JS -->
+
     </div>
 
 
     <div id="substance_controls">
         <h3>Substance Selection</h3>
         User can select a substance via this menu. Changing the substance will
-        completely reset all data. Ideal gases currently suffer from a backend bug on
-        specifying T&s. Air doesn't work yet because something isn't implemented
-        on the backed.<br>
-        <label>Select Substance: </label>
-        <select id="sel_substance">
-            <!-- Populated by JS -->
-        </select>
+        completely reset all data. Air has some mild issues because igmix lags
+        development on the backed.<br>
+
+        <!-- Control populated by JS -->
+
     </div>
 
     <div id="property_controls">
         <h3>Property Input</h3>
         This is where the user can input property data, using whatever units have been
         apply'd. Only two properties can be specified at one time. Adjusts visible
-        for mp substances vs. ideal gases. Buttons of GET and POST use separate HTTP
-        request types. GET will be removed for deploy, because it doesn't accommodate units.<br>
-        <form id="propform">
-            <table id="propinput">
-                <button type="button" id="get_props">Change Content - GET</button>
-                <button type="button" id="post_props">Change Content - POST</button>
+        for mp substances vs. ideal gases. Button submits HTTP POST request.<br>
 
-            </table>
-        </form>
+        <!-- Control Inserted by JS -->
+
     </div>
 </div>
 <div id="outputs">
     <div id="property_selection">
         <h3>Property Display Selection</h3>
-        User can specify which properties should be shown in the table. Expand and
-        adjust the checkboxes as desired.<br>
-        <input type="button" id="propchoice_hide" value="Show Props"/>
-        <ul id="propchecks" style="display: none">
-        </ul>
+        User can specify which properties should be shown in the table. Expand
+        and adjust the checkboxes as desired.<br>
+
+        <!-- Control Inserted by JS -->
+
     </div>
-    <div id="property_display">
+    <div id="isoline_selection">
+        <h3>Isoline Display Selection</h3>
+        User can specify which isobars should be shown in the plot. Expand
+        and adjust the checkboxes as desired.<br>
+
+        <!-- Control Inserted by JS -->
+
+    </div>
+    <div id="property_table" style="width:864px;">
         <h3>Property Table</h3>
         Most interactivity provided by Datatables. Should be responsive to which
         properties are checked in the property selection. Lots of cleanup and display
         optimization is needed here, but the basic functionality exists. Prettify!<br>
-        <table id="proptable">
-            <!-- Populated by JS -->
-        </table>
+
+        <!-- Table Inserted by JS -->
+
     </div>
-    <div>
+    <div id="plot_display" style="width: 600px;">
         <h3>Plot</h3>
         The plot responds to the points added to the table. It should display
         all the points that were added. It should also allow the user to click
-        to add a point for substances (subject to the points being in range). We
-        need better initialization to show some iso-lines for the selected substance
-        so right now you can't really click-to-add until you've added a point manually.
-        Hover tooltip works with extra property info. Ideal gas click-to-add
-        doesn't work right now but that's a backend issue. Lots of prettification
+        to add a point for substances (subject to the points being in range).
+        Hover tooltip works with extra property info. Lots of prettification
         needed here.<br>
-        <label labelfor="xprop">X Property</label>
-        <select id="xprop" name="xprop" val="s">
-            <option value="p">p</option>
-            <option value="v">v</option>
-            <option value="s" selected>s</option>
-            <option value="h">h</option>
-        </select>
-        <label labelfor="yprop">Y Property</label>
-        <select id="yprop" name="yprop" val="T">
-            <option value="T" selected>T</option>
-            <option value="p">p</option>
-        </select>
-        <div id="plot" style="width:600px;height:400px;">
 
-            <!-- Will be filled in by JS -->
-        </div>
+        <!-- Plot inserted by JS -->
+
     </div>
 </div>
 </body>

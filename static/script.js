@@ -139,7 +139,7 @@ class PointModel extends Subject{
         let keys = this.get_output_properties();
         keys.push('ptid');
         keys.forEach((key) =>{
-             this.points[key] = [];
+            this.points[key] = [];
         });
 
         // Keep the global aux lines (i.e. assume substance constant)
@@ -200,6 +200,46 @@ class PointModel extends Subject{
     }
 
     /**
+     * Get the current unit strings for a list of properties
+     * @returns units - a dict of the current units. Keys are property,
+     *                  values are the unit value as a string
+     */
+    get_units_for_prop(props=[]){
+        if (this.units === null) { return ""; }
+
+        if (props.length === 0) {
+            props = this.get_output_properties();
+        }
+
+        let unitstrs = {}
+        props.forEach((prop) => {
+            let propstr;
+            // Case it out by the property
+            if (prop === 'T') {
+                propstr = this.units['temperature'];
+            } else if (prop === 'p') {
+                propstr = this.units['pressure'];
+            } else if (prop === 'd') {
+                propstr = this.units['matter'] + '/' + this.units['volume'];
+            } else if (prop === 'v') {
+                propstr = this.units['volume'] + '/' + this.units['matter'];
+            } else if (prop === 'e' || prop === 'h') {
+                propstr = this.units['energy'] + '/' + this.units['matter'];
+            } else if (prop === 's' || prop === 'cp' || prop === 'cv') {
+                propstr = this.units['energy'] + '/ (' + this.units['matter'] + ' ' + this.units['temperature'] + ')';
+            } else {
+                propstr = '-';
+            }
+            unitstrs[prop] = propstr;
+        });
+        if (props.length === 1) {
+            return unitstrs[props[0]];
+        } else {
+            return unitstrs;
+        }
+    }
+
+    /**
      * Get all valid substance data
      * @returns valid_substances - dict of valid substances, keys are the
      *                              substance id, values are a dict with info
@@ -215,8 +255,7 @@ class PointModel extends Subject{
      */
     get_output_properties(){
         if (this.valid_substances != null && this.substance != null) {
-            let props = [...this.valid_substances[this.substance]['props']]
-            return props;
+            return [...this.valid_substances[this.substance]['props']]
         } else {
             return [];
         }
@@ -308,7 +347,7 @@ class PointModel extends Subject{
         this.delete_auxlines(id);
 
         // If this was the last point, we want to clear things out.
-        if (this.points['ptid'].length == 0){
+        if (this.points['ptid'].length === 0){
             this.init_points();
         } else {
             this.notify(this, PointModel.EVENT_POINT_DELETE, id);
@@ -355,12 +394,17 @@ class PointModel extends Subject{
 class SubstanceFormView{
 
     constructor(formHTMLid, show_all=false) {
+        this.select_name = "select";
+
         this.show_all = show_all;
-        this.target = formHTMLid;
+        this.target = $("#"+formHTMLid);
+        let select = $('<select/>').attr({id: this.select_name});
+        this.target.append(select);
+        this.select = $('#'+this.select_name, this.target);
     }
 
     update(source, event, data){
-        if (event == PointModel.EVENT_SUBSTANCE){
+        if (event === PointModel.EVENT_SUBSTANCE){
             this.set_value(data);  // Set the current value to the model's state
         }
     }
@@ -370,7 +414,7 @@ class SubstanceFormView{
      * @param substance - A substance id as a string
      */
     set_value(substance){
-        $(this.target).val(substance);
+        this.select.val(substance);
     }
 
     /**
@@ -382,7 +426,7 @@ class SubstanceFormView{
      */
     init(substances, current_value=null, shortlist=null){
 
-        let subsel = $(this.target);
+        let subsel = this.select;
         // Loop over the substances, create option group for each category
         Object.keys(substances).forEach(subst => {
             if (this.show_all || shortlist == null || shortlist.includes(subst)) {
@@ -416,29 +460,46 @@ class SubstanceFormView{
 class UnitFormView{
 
     constructor(formHTMLid) {
-        this.target = formHTMLid;
-        this.unit_list_div = "#hideablelist"; // Target for the unit selects
+        this.target = $("#"+formHTMLid);
+        this.button_hide_name = "unit_hide";
+        this.unit_list_div_name = "hideablelist";
+        this.unit_form_name = "unitform";
+        this.button_apply_name = "unit_apply";
+        this.button_revert_name = "unit_revert";
 
-        // Button to hide the whole form
-        this.button_hide = "#unit_hide"
-
-        // Buttons for apply/revert functionality since multiple options may change at once
-        this.button_apply = "#unit_apply";
-        this.button_revert = "#unit_revert";
-
-        // Because these are callbacks they need "this" bound.
-        this.apply_onclick = this.apply_onclick.bind(this);
-        this.revert_onclick = this.revert_onclick.bind(this);
-        $(this.button_apply).on("click", this.apply_onclick);
-        $(this.button_revert).on("click", this.revert_onclick);
-
+        // Create the hide button and assign its callback.
+        let hidebutton = $('<input/>').attr({type: 'button', id: this.button_hide_name, value: "Units"});
+        this.target.append(hidebutton);
+        this.button_hide = $('#'+this.button_hide_name, this.target);
         this.hide_onclick = this.hide_onclick.bind(this);
-        $(this.button_hide).on("click", this.hide_onclick);
+        this.button_hide.on("click", this.hide_onclick);
+
+
+        // Create a <ul> to hold the checklist, and the checklist
+        let unitlist = $('<ul/>').attr({id: this.unit_list_div_name, style: "display: none"});
+        this.target.append(unitlist);
+        this.unit_list_div = $('#'+this.unit_list_div_name, this.target);
+        let unitform = $('<form/>').attr({id: this.unit_form_name});
+        this.unit_list_div.append(unitform);
+        this.unit_form = $('#'+this.unit_form_name, this.target);
+
+        // Create the apply and revert buttons
+        let applybutton = $('<input/>').attr({type: 'button', id: this.button_apply_name, value: "Apply", style: "display: none"});
+        this.unit_list_div.append(applybutton);
+        this.button_apply = $('#'+this.button_apply_name, this.target);
+        this.apply_onclick = this.apply_onclick.bind(this);
+        this.button_apply.on("click", this.apply_onclick);
+
+        let revertbutton = $('<input/>').attr({type: 'button', id: this.button_revert_name, value: "Revert", style: "display: none"});
+        this.unit_list_div.append(revertbutton);
+        this.button_revert = $('#'+this.button_revert_name, this.target);
+        this.revert_onclick = this.revert_onclick.bind(this);
+        this.button_revert.on("click", this.revert_onclick);
     }
 
 
     update(source, event, data){
-        if (event == PointModel.EVENT_UNIT){
+        if (event === PointModel.EVENT_UNIT){
             this.set_values(data);
         }
     }
@@ -469,11 +530,11 @@ class UnitFormView{
             });
 
             $select.on("change", ()=>{
-                $(this.button_apply).show();
-                $(this.button_revert).show();
+                this.button_apply.show();
+                this.button_revert.show();
             });
             // Add the objects to the form
-            $(this.target).append($li.append($label).append($select));
+            this.unit_form.append($li.append($label).append($select));
         });
         // Set all the values
         this.set_values(current_values);
@@ -486,7 +547,7 @@ class UnitFormView{
     set_values(units){
         // Copy the values from a dict
         Object.keys(units).forEach(key => {
-            let selobj = $('[name="'+key+'"]');
+            let selobj = $('[name="'+key+'"]', this.target);
             selobj.val(units[key]);
         });
     }
@@ -497,7 +558,7 @@ class UnitFormView{
      */
     get_values(){
         // Convert the values to a dict
-        return Object.fromEntries(new FormData($(this.target)[0]));
+        return Object.fromEntries(new FormData(this.unit_form[0]));
     }
 
     /**
@@ -509,8 +570,8 @@ class UnitFormView{
         let success = confirm('Changing the units will reset all data. Are you sure?');
         if(success){
             // Pass the units to the controller
-            $(this.button_apply).hide();
-            $(this.button_revert).hide();
+            this.button_apply.hide();
+            this.button_revert.hide();
             set_units(this.get_values())
         } else {
             // do nothing and let the user figure it out
@@ -524,15 +585,15 @@ class UnitFormView{
     revert_onclick(){
         // revert back to what was set previously
         this.set_values(get_units());
-        $(this.button_apply).hide();
-        $(this.button_revert).hide();
+        this.button_apply.hide();
+        this.button_revert.hide();
     }
 
     /**
      * User clicks the show/hide button
      */
     hide_onclick(){
-        $(this.unit_list_div).toggle();
+        this.unit_list_div.toggle();
     }
 }
 
@@ -541,34 +602,43 @@ class UnitFormView{
  */
 class PropEntryView{
     constructor(formHTMLid) {
-        this.target = formHTMLid;
-        this.prop_table = "#propinput";
-        this.prop_form = "#propform";
+        this.target = $("#"+formHTMLid);
+        this.prop_table_name = "propinput";
+        this.prop_form_name = "propform";
+        this.post_button_name = "post_props";
 
-        this.get_button = "#get_props";
-        this.post_button = "#post_props";
+        let propform = $('<form/>').attr({id: this.prop_form_name});
+        this.target.append(propform);
+        this.prop_form = $("#"+this.prop_form_name, this.target);
 
-        // Since these are callbacks they need to be bound to this
-        this.get_onclick = this.get_onclick.bind(this);
+        let proptable = $('<table/>').attr({id: this.prop_table_name});
+        this.target.append(proptable);
+        this.prop_table = $("#"+this.prop_table_name, this.target);
+
+        let postbutton = $('<input/>').attr({type: 'button', id: this.post_button_name, value: "Compute"});
+        this.target.append(postbutton);
+        this.post_button = $("#"+this.post_button_name, this.target);
         this.post_onclick = this.post_onclick.bind(this);
-        $(this.get_button).on("click", this.get_onclick);
-        $(this.post_button).on("click", this.post_onclick);
+        this.post_button.on("click", this.post_onclick);
     }
 
     update(source, event, data){
-        if (event == PointModel.EVENT_SUBSTANCE) {
+        if (event === PointModel.EVENT_SUBSTANCE) {
             let prop_vals = this.get_values();  // Retain values
-            this.init(get_input_properties(), prop_vals);
+            this.init(get_input_properties(), get_unit_strings(), prop_vals);
+        } else if (event === PointModel.EVENT_UNIT) {
+            this.init(get_input_properties(), get_unit_strings());
         }
     }
 
     /**
      * Initialize things
      * @param input_properties - An array of input property strings
+     * @param unit_strings - A dict of units keyed by prop
      * @param prop_values - a dict keyed by property and with string values
      */
-    init(input_properties, prop_values=null) {
-        this.create_propform(input_properties);
+    init(input_properties, unit_strings=null, prop_values=null) {
+        this.create_propform(input_properties, unit_strings);
         this.set_form_values(prop_values);
     }
 
@@ -576,19 +646,23 @@ class PropEntryView{
      * Build the form. Note that an extra HTML attribute of propvalue will be
      * used to specify the actual property string separate from the name.
      * @param props - an array of property strings
+     * @param units - an dict of unit strings by prop
      */
-    create_propform(props) {
+    create_propform(props, units=null) {
         // Always start from scratch
-        $(this.prop_table).empty();
+        this.prop_table.empty();
 
         // Build a header
         let head = "<thead><tr>"
         props.forEach((prop) => {
+            if (units != null){
+                prop = prop + " (" + units[prop] +")";
+            }
             head = head + "<th>" + prop + "</th>";
         });
         head = head + "</tr></thead>";
 
-        $(this.prop_table).append(head);
+        this.prop_table.append(head);
 
         // Build each input box
         let tr = $("<tr>")
@@ -598,7 +672,7 @@ class PropEntryView{
             let inputbox = `<input type="text" propvalue="${prop}" id="${prop}_input" name="${prop}_input">`;
             tr.append(td.append(inputbox));
         });
-        $(this.prop_table).append(tr);
+        this.prop_table.append(tr);
     }
 
     /**
@@ -607,7 +681,7 @@ class PropEntryView{
      */
     set_form_values(props) {
         if (props != null) {
-            $(this.prop_form + ' input').each((id, box) => {
+            $('input', this.prop_table).each((id, box) => {
                 let boxkey = box.attributes['propvalue'].nodeValue;
                 if (Object.keys(props).includes(boxkey)) {
                     box.value = props[boxkey];
@@ -624,7 +698,7 @@ class PropEntryView{
         let outdata = {}; // A dict of specified props
 
         // Loop over each input box
-        $(this.prop_form+ " input").each((id, box) =>{
+        $('input', this.prop_table).each((id, box) =>{
             let value = box.value;
             if (value !== ""){ // If specified, add it to the prop dict
                 let prop = box.attributes['propvalue'].nodeValue;
@@ -632,13 +706,6 @@ class PropEntryView{
             }
         });
         return outdata;
-    }
-
-    /**
-     * A callback to execute the GET operation. Probably not needed for deployment
-     */
-    get_onclick(){
-        compute_point(this.get_values(), "GET");
     }
 
     /**
@@ -657,23 +724,44 @@ class PropEntryView{
  */
 class PropChooserView extends Subject{
     static EVENT_PROPERTY_VISIBILITY = 'propvis'; // When the checkboxes change
-    constructor(formHTMLid) {
+    static EVENT_ISOLINE_VISIBILITY = 'isolinevis'; // When the checkboxes change
+    constructor(target_div_id, event_type, shortlist = null) {
         super();
-        this.target = formHTMLid;
-        this.hide_checks = "#propchoice_hide";
-        this.prop_checks = "#propchecks";
+        this.event_type = event_type;
+        this.shortlist = shortlist;
+
+        this.target_name = target_div_id;
+        this.hide_checks_name = "propchoice_hide";
+        this.prop_checks_name = "propchecks";
+
+        // Initialize selectors for the components that make up this control
+        this.target = $("#" + this.target_name);
+
+        // Create the show/hide button
+        let hidebutton = $('<input/>').attr({type: 'button', id: this.hide_checks_name, value: "Show Props"});
+        this.target.append(hidebutton);
+        // Get its selector
+        this.hide_checks = $('#'+this.hide_checks_name, this.target);
+
+        // Create a <ul> to hold the checklist
+        let checklist = $('<ul/>').attr({id: this.prop_checks_name, style: "display: none"});
+        this.target.append(checklist);
+        // Get its selector
+        this.prop_checks = $('#'+this.prop_checks_name, this.target);
+
+        this.hide_checks.on("click", () =>{
+            this.prop_checks.toggle();  // Toggle visibility of checklist
+        });
 
         // Since these will be used as callbacks, they need to be bound
         this.checkbox_onchange = this.checkbox_onchange.bind(this);
-
-        this.hide_onclick = this.hide_onclick.bind(this);
-        $(this.hide_checks).on("click", this.hide_onclick);
     }
 
+
     update(source, event, data) {
-        if (event == PointModel.EVENT_SUBSTANCE) {
+        if (event === PointModel.EVENT_SUBSTANCE) {
             let disp_props = this.get_checkbox_values();
-            this.init(get_output_properties(), disp_props);
+            this.init(source.get_output_properties(), disp_props);
         }
     }
 
@@ -686,7 +774,7 @@ class PropChooserView extends Subject{
         this.create_checkboxes(valid_properties);
         this.set_checkbox_values(show_properties);
 
-        this.notify(this,PropChooserView.EVENT_PROPERTY_VISIBILITY, this.get_checkbox_values());
+        this.notify(this, this.event_type, this.get_checkbox_values());
     }
 
     /**
@@ -694,25 +782,28 @@ class PropChooserView extends Subject{
      * @param valid_properties - an array of valid property strings
      */
     create_checkboxes(valid_properties) {
-        $(this.prop_checks).empty();
+        this.prop_checks.empty();
         // Loop over all properties
         valid_properties.forEach(prop => {
-            // The form will be a list of labelled check boxes
-            let $li = $("<li>")
-            let $label = $('<label>' + prop + '</label>', {});
+            if (this.shortlist == null || this.shortlist.includes(prop)) {
+                // The form will be a list of labelled check boxes
+                let $li = $("<li>")
+                let $label = $('<label>' + prop + '</label>', {});
 
-            let $checkbox = $('<input>',{
+                // Add this checkbox
+                let $checkbox = $('<input>', {
                     type: "checkbox",
                     value: prop,
-                    id: prop+'_box',
-                    name: prop+'_box'
-            });
+                    id: prop + '_box',
+                    name: prop + '_box'
+                });
 
-            // add the callback
-            $checkbox.on("click", this.checkbox_onchange);
+                // add the callback
+                $checkbox.on("click", this.checkbox_onchange);
 
-            // Add the objects to the form
-            $(this.prop_checks).append($li.append($label).append($checkbox));
+                // Add the objects to the form
+                this.prop_checks.append($li.append($label).append($checkbox));
+            }
         });
     }
 
@@ -721,7 +812,7 @@ class PropChooserView extends Subject{
      */
     checkbox_onchange(){
         let disp_props = this.get_checkbox_values();
-        this.notify(this, PropChooserView.EVENT_PROPERTY_VISIBILITY, disp_props);
+        this.notify(this, this.event_type, disp_props);
     }
 
     /**
@@ -730,7 +821,7 @@ class PropChooserView extends Subject{
      */
     get_checkbox_values() {
         let names = [];
-        $(this.prop_checks + ' input:checked').each((id, box) => {
+        $('input:checked', this.prop_checks).each((id, box) => {
             names.push(box.value);
         });
         return names;
@@ -742,7 +833,7 @@ class PropChooserView extends Subject{
      */
     set_checkbox_values(show_properties) {
 
-        $(this.prop_checks + ' input').each((id, box) => {
+        $('input', this.prop_checks).each((id, box) => {
             let prop = box.value;
             let checked = show_properties.includes(prop);
             if (checked) {
@@ -751,13 +842,6 @@ class PropChooserView extends Subject{
                 box.checked = false;
             }
         });
-    }
-
-    /**
-     * Toggle visibility of properties
-     */
-    hide_onclick(){
-        $(this.prop_checks).toggle();
     }
 
 
@@ -805,24 +889,56 @@ Number.prototype.between = function(min, max) {
  */
 class PlotView{
     TRACEORDER = ['user','steamdome','p','T','d', 'h', 's', 'x']
+    TRACENAMES = ['User Data', 'Steam Dome', 'Const. p', 'Const. T', 'Const. d', 'Const. h', 'Const. s', 'Const. x']
+    TRACECOLORS = ['']
 
     constructor(divTarget) {
-        // TODO - variable plot x- and y-axes
-        // TODO - Additional background data, steam dome, isolines
-        // TODO - variable display props in popups
-        // TODO - axis labels, plot quality
+        // TODO - plot prettiness
         this.dispprops = ['T','s','p','v'];
-        this.target = divTarget;
-        this.container = document.getElementById(divTarget);
+        this.dispisos = ['T', 'p', 'h'];
+        this.target = $("#"+divTarget);
+        this.plot_div_name = "plot";
 
-        this.onChangeAxes = this.onChangeAxes.bind(this);
-        $("#yprop").on("change", this.onChangeAxes);
-        $("#xprop").on("change", this.onChangeAxes);
-        this.setAxes('s', 'T')
+        this.create_axis_selects();
+
+        // Create the div for the plot
+        let plot = $("<div/>").attr({id: this.plot_div_name});
+        this.target.append(plot);
+        this.plot = $("#"+this.plot_div_name, this.target);
 
         this.traces = [];
 
         this.init();
+    }
+
+    create_axis_selects(){
+        // Create the axis selector Buttons
+        let xaxis_defs = {id: 'xprop', def: 's', opts: ['T','v','h','s'], label: 'X Property'};
+        let yaxis_defs = {id: 'yprop', def: 'T', opts: ['T','p'], label: 'Y Property'};
+
+        this.onChangeAxes = this.onChangeAxes.bind(this);
+
+        // Create a div to put the buttons within
+        let btnholder = $("<div/>").attr({id: "buttons"});
+        [xaxis_defs, yaxis_defs].forEach((defaults)=>{
+            let label = $("<label>").text(defaults['label']).attr({labelfor: defaults['id']});
+            btnholder.append(label);
+
+            let sel = $("<select/>").attr({id: defaults['id'], name: defaults['id'], value: defaults['def']});
+            defaults['opts'].forEach((opt) =>{
+               let newopt = $("<option>").val(opt).text(opt);
+               sel.append(newopt);
+            });
+            sel.val(defaults['def']).change();
+            sel.on("change", this.onChangeAxes)
+            btnholder.append(sel);
+        });
+        this.target.append(btnholder);
+
+        // Set the button callbacks
+        this.xprop_sel = $("#"+xaxis_defs['id'], this.target);
+        this.yprop_sel = $("#"+yaxis_defs['id'], this.target);
+        this.setAxes(this.xprop_sel.val(), this.yprop_sel.val());
     }
 
     init(){
@@ -860,8 +976,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines p',
-            hovertemplate: "<b>Isobar<br></b>"+
-                "p: %{customdata}",
+            hovertemplate: "<b>Isobar</b><br>"+
+                "p: %{customdata:.5g}",
             showlegend: false,
             line: {
                 color: 'rgb(0, 100, 0)',
@@ -874,8 +990,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines p',
-            hovertemplate: "<b>Isotherm<br></b>"+
-                "T: %{customdata}",
+            hovertemplate: "<b>Isotherm</b><br>"+
+                "T: %{customdata:#.4g}",
             showlegend: false,
             line: {
                 color: 'rgb(155, 0, 0)',
@@ -888,8 +1004,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines d',
-            hovertemplate: "<b>Iso-d Line<br></b>"+
-                "d: %{customdata}",
+            hovertemplate: "<b>Iso-d Line</b><br>"+
+                "d: %{customdata:#.4g}",
             showlegend: false,
             line: {
                 color: 'rgb(0, 155, 155)',
@@ -902,8 +1018,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines h',
-            hovertemplate: "<b>Iso-h Line<br></b>"+
-                "h: %{customdata}",
+            hovertemplate: "<b>Iso-h Line</b><br>"+
+                "h: %{customdata:#.4g}",
             showlegend: false,
             line: {
                 color: 'rgb(155, 155, 0)',
@@ -916,8 +1032,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines s',
-            hovertemplate: "<b>Iso-s line<br></b>"+
-                "s: %{customdata}",
+            hovertemplate: "<b>Iso-s line</b><br>"+
+                "s: %{customdata:#.3g}",
             showlegend: false,
             line: {
                 color: 'rgb(0, 0, 155)',
@@ -930,8 +1046,8 @@ class PlotView{
             mode: 'lines',
             type: 'scatter',
             name: 'isolines x',
-            hovertemplate: "<b>Iso-x line<br></b>"+
-                "x: %{customdata}",
+            hovertemplate: "<b>Iso-x line</b><br>"+
+                "x: %{customdata:#.2g}",
             showlegend: false,
             line: {
                 color: 'rgb(155, 0, 155)',
@@ -939,7 +1055,7 @@ class PlotView{
             }
         });
         // Create the plot object
-        Plotly.newPlot(this.container, this.traces, this.layout);
+        Plotly.newPlot(this.plot.get()[0], this.traces, this.layout);
         this.setupPlotClickListener();
     }
 
@@ -949,12 +1065,12 @@ class PlotView{
     set_layout(){
         let x_scale;
         let y_scale;
-        if (this.x_prop == 'v' || this.x_prop == 'p'){
+        if (this.x_prop === 'v' || this.x_prop === 'p'){
             x_scale = 'log';
         } else {
             x_scale = 'linear';
         }
-        if (this.y_prop == 'p'){
+        if (this.y_prop === 'p'){
             y_scale = 'log';
         } else {
             y_scale = 'linear';
@@ -962,12 +1078,12 @@ class PlotView{
 
         this.layout = {
             xaxis: {
-                title: this.x_prop,
+                title: this.x_prop + " (" + get_unit_strings([this.x_prop])+")",
                 type: x_scale,
                 autorange: true
             },
             yaxis: {
-                title: this.y_prop,
+                title: this.y_prop + " (" + get_unit_strings([this.y_prop])+")",
                 type: y_scale,
                 autorange: true
             },
@@ -979,28 +1095,28 @@ class PlotView{
      * A listener for dealing with the user clicking to add a point
      */
     setupPlotClickListener(){
-        let myPlot = this.container;
+        let myPlot = this.plot.get()[0];
         let myPlotContainer = this;
         d3.select(".plotly").on('click', function(d, i) {
-            var e = d3.event;
-            var bgrect = document.getElementsByClassName('gridlayer')[0].getBoundingClientRect();
+            let e = d3.event;
+            let bgrect = document.getElementsByClassName('gridlayer')[0].getBoundingClientRect();
             let x = 0;
             let y = 0;
             let betweenx = false;
             let betweeny = false;
             // X Axis
-            if (myPlotContainer.layout['xaxis']['type'] == 'linear') {
+            if (myPlotContainer.layout['xaxis']['type'] === 'linear') {
                 x = ((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0];
                 betweenx = x.between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]);
-            } else if (myPlotContainer.layout['xaxis']['type'] == 'log'){
+            } else if (myPlotContainer.layout['xaxis']['type'] === 'log'){
                 x = 10**(((e.x - bgrect['x']) / (bgrect['width'])) * (myPlot.layout.xaxis.range[1] - myPlot.layout.xaxis.range[0]) + myPlot.layout.xaxis.range[0]);
                 betweenx = Math.log10(x).between(myPlot.layout.xaxis.range[0], myPlot.layout.xaxis.range[1]);
             }
             // Y Axis (flipped coords)
-            if (myPlotContainer.layout['yaxis']['type'] == 'linear') {
+            if (myPlotContainer.layout['yaxis']['type'] === 'linear') {
                 y = ((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1];
                 betweeny = y.between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1]);
-            } else if (myPlotContainer.layout['yaxis']['type'] == 'log') {
+            } else if (myPlotContainer.layout['yaxis']['type'] === 'log') {
                 y = 10 ** (((e.y - bgrect['y']) / (bgrect['height'])) * (myPlot.layout.yaxis.range[0] - myPlot.layout.yaxis.range[1]) + myPlot.layout.yaxis.range[1]);
                 betweeny = Math.log10(y).between(myPlot.layout.yaxis.range[0], myPlot.layout.yaxis.range[1]);
             }
@@ -1015,54 +1131,26 @@ class PlotView{
         });
     }
 
-
     update(source, event, data){
-        if (event == PointModel.EVENT_POINT_ADD || event == PointModel.EVENT_POINT_DELETE){
+        if (event === PointModel.EVENT_POINT_ADD || event === PointModel.EVENT_POINT_DELETE){
             this.updatePoints(source.get_points());
-        } else if (event == PointModel.EVENT_INIT_POINTS) {
+        } else if (event === PointModel.EVENT_INIT_POINTS || event === PointModel.EVENT_UNIT) {
             this.init();
-        } else if (event == PropChooserView.EVENT_PROPERTY_VISIBILITY){
+            this.draw_auxlines(source.get_auxlines());
+        } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
             this.dispprops = data;
             this.updatePoints(get_points());
-        } else if (event == PointModel.EVENT_AUXLINE_ADD) {
+        } else if (event === PropChooserView.EVENT_ISOLINE_VISIBILITY){
+            this.dispisos = data;
+            this.draw_auxlines(get_auxlines());
+        } else if (event === PointModel.EVENT_AUXLINE_ADD) {
             this.draw_auxlines(source.get_auxlines());
         }
     }
 
-    draw_auxlines(data){
-        this.TRACEORDER.forEach((prop) =>{
-           let ind = this.TRACEORDER.indexOf(prop);
-           if (ind > 0) {
-               let iso_update = null;
-               data['global'].forEach((line) => {
-                   if (line['type'] == prop) {
-                       if (iso_update == null) {
-                           iso_update = {};
-                           Object.keys(line['data']).forEach((key) => {
-                               iso_update[key] = [];
-                           });
-                       }
-                       Object.keys(line['data']).forEach((key) => {
-                           iso_update[key] = iso_update[key].concat(line['data'][key]);
-                           iso_update[key].push(null);
-                       });
-                   }
-               });
-
-               if (iso_update != null) {
-                   let update = {
-                       x: [iso_update[this.x_prop]],
-                       y: [iso_update[this.y_prop]],
-                       customdata: [iso_update[prop]]
-                   };
-                   Plotly.restyle(this.container, update, [ind]);
-               }
-           }
-        });
-    }
 
     onChangeAxes(){
-        this.setAxes($('#xprop').val(), $('#yprop').val())
+        this.setAxes(this.xprop_sel.val(), this.yprop_sel.val())
         this.init();
         this.draw_auxlines(get_auxlines());
         this.updatePoints(get_points());
@@ -1073,16 +1161,77 @@ class PlotView{
         this.y_prop = yprop;
     }
 
+
+    /**
+     * Handle updates to the auxiliary lines on the plot (i.e. isobars, dome)
+     * @param data - the isolines dict corresponding to PointModel.get_auxlines()
+     */
+    draw_auxlines(data){
+        // Loop over every iso-trace that we put in the diagram
+        this.TRACEORDER.forEach((prop) =>{
+
+            // Establish the index in the order of the traces
+            let ind = this.TRACEORDER.indexOf(prop);
+            if (ind > 0) { // ind 0 is the user points
+
+                // Make a placeholder for the updates
+                let iso_update = null;
+
+                if (prop === 'steamdome' ||
+                    (this.x_prop !== prop && this.y_prop !== prop &&
+                        this.dispisos.includes(prop))
+                ) {
+                    // Loop over all the aux lines that are in the "global" category
+                    data['global'].forEach((line) => {
+
+                        if (line['type'] === prop) {
+
+                            // Initialize the trace update on the first call
+                            if (iso_update == null) {
+                                iso_update = {};
+                                Object.keys(line['data']).forEach((key) => {
+                                    iso_update[key] = [];
+                                });
+                            }
+
+                            // Add the line to the trace property by property
+                            Object.keys(line['data']).forEach((key) => {
+                                iso_update[key] = iso_update[key].concat(line['data'][key]);
+                                iso_update[key].push(null);
+                            });
+                        }
+                    });
+                }
+
+                // Send the updated traces to the actual plot
+                let update = {
+                        x: [null],
+                        y: [null],
+                        customdata: [null]  // Display their text
+                    };
+                if (iso_update != null) {
+                    update = {
+                        x: [iso_update[this.x_prop]],
+                        y: [iso_update[this.y_prop]],
+                        customdata: [iso_update[prop]]  // Display their text
+                    };
+                }
+                Plotly.restyle(this.plot.get()[0], update, [ind]);
+            }
+        });
+    }
+
     /**
      * Handling points being added to the list of points
      * @param points
      */
     updatePoints(points) {
-        // Build the customdata object for the tooltip
-        // Object has the form [[h1,v1,s1],[h2,v2,s2],[h3,v3,s3]]
+        // Build the customdata object for the tooltip according to the API
+        // Object takes the form [[h1,v1,s1,...],[h2,v2,s2,...],[h3,v3,s3,...]]
 
+        // Loop over all the points
         let allkeys = Object.keys(points);
-        if (allkeys.length >0) {
+        if (allkeys.length >0) {  // Only if there are points
             let customdataset = [];  // The custom data that will be added to the tooltip
             let keylist = [];
             for (let i = 0; i < points['ptid'].length; i++) {  // Loop over all points
@@ -1093,7 +1242,7 @@ class PlotView{
                     if (key !== this.x_prop &&
                         key !== this.y_prop &&
                         this.dispprops.includes(key)) {
-                        if (i == 0) {
+                        if (i === 0) {
                             keylist.push(key);
                         }
                         arr.push(points[key][i]);
@@ -1102,26 +1251,27 @@ class PlotView{
                 customdataset.push(arr);
             }
 
-            // customdataset is now (ptid, T, p, v, ...)
+            // customdataset is now ordered as (ptid, T, p, v, ...)
 
-            // Build the strings that identify the points
+            // Build the strings that represent the tooltip
             let customrows = "";
             for (let i = 0; i < keylist.length; i++) {
-                customrows = customrows + keylist[i] + ": %{customdata[" + (i + 1) + "]}<br>";
+                customrows = customrows + keylist[i] + ": %{customdata[" + (i + 1) + "]:#.5g}<br>";
             }
 
-            // Fully replace trace, including the custom data
+            // Fully replace User Point trace, including the custom data
             let update = {
                 x: [points[this.x_prop]],
                 y: [points[this.y_prop]],
                 customdata: [customdataset],
-                hovertemplate: "<b> Point %{customdata[0]}</b><br>" +
+                hovertemplate: "<b>Point %{customdata[0]}</b><br>" +
                     this.x_prop + ": %{x}<br>" +
                     this.y_prop + ": %{y}<br>" +
                     customrows,
             }
-            // May need to adjust traceID when we accommodate the isolines, etc.
-            Plotly.restyle(this.container, update, [0])
+
+            let ind = this.TRACEORDER.indexOf('user');
+            Plotly.restyle(this.plot.get()[0], update, [ind])
         }
     }
 }
@@ -1130,11 +1280,16 @@ class PlotView{
  * A class for managing the interactive table
  */
 class TableView{
-    // TODO - Unit display in header?
     // delete rows? https://stackoverflow.com/questions/64526856/how-to-add-edit-delete-buttons-in-each-row-of-datatable
     // showhide columns https://datatables.net/examples/api/show_hide.html
     constructor(divTarget) {
-        this.target = divTarget;
+        this.target = $("#"+divTarget);
+
+        // create a <table> within the div that we'll operate on
+        this.tabletarget = $("<table id='proptable'></table>");
+        this.target.append(this.tabletarget);
+
+        this.proptext_to_id = {};
         this.table = null
     }
 
@@ -1145,24 +1300,29 @@ class TableView{
         }
 
         if (this.table == null){
-            let $tablediv = $(this.target);
-            $tablediv.empty();
+            this.tabletarget.empty();
             let $head = $('<thead></thead>');
             let $foot = $('<tfoot></tfoot>'); // Havent figured out the footer
             let $r = $('<tr></tr>')
+            this.proptext_to_id = {};
             this.dispprops.forEach((prop) =>{
-                let $th = $('<th>'+prop+'</th>');
+                let propstr = prop;
+                if (prop !== 'ptid'){
+                    propstr = propstr + " ("+get_unit_strings([prop])+")";
+                    this.proptext_to_id[propstr] = prop;
+                }
+                let $th = $('<th>'+propstr+'</th>');
                 $r.append($th);
             });
             $r.append('<th>Ctrl</th>');
             $head.append($r);
             //$foot.append($r);
-            $tablediv.append($head);
+            this.tabletarget.append($head);
             //$tablediv.append($foot);
 
 
             // Build the data table with null content. Insert the delete button in the extra column.
-            let table = new DataTable(this.target, {
+            let table = new DataTable(this.tabletarget, {
                 "columnDefs": [ {
                     "targets": -1,
                     "data": null,
@@ -1171,7 +1331,7 @@ class TableView{
             });
 
             // Click handler for each row's delete button
-            $(this.target + ' tbody').on( 'click', 'button', function () {
+            $('tbody', this.tabletarget).on( 'click', 'button', function () {
                 let data = table.row( $(this).parents('tr') ).data();
                 delete_point(data[0]);
             } );
@@ -1187,11 +1347,11 @@ class TableView{
     }
 
     update(source, event, data){
-        if (event == PointModel.EVENT_POINT_ADD || event == PointModel.EVENT_POINT_DELETE){
+        if (event === PointModel.EVENT_POINT_ADD || event === PointModel.EVENT_POINT_DELETE){
             this.updatePoints(source.get_points());
-        } else if (event == PointModel.EVENT_INIT_POINTS) {
+        } else if (event === PointModel.EVENT_INIT_POINTS) {
             this.init(get_output_properties());
-        } else if (event == PropChooserView.EVENT_PROPERTY_VISIBILITY) {
+        } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
             this.columnVisibility(data);
         }
     }
@@ -1206,7 +1366,7 @@ class TableView{
             let col = this.table.column(ind);
             let name = col.header().textContent
             // Always display ptid and ctrl columns
-            if (columns.includes(name) || name=="ptid" || name=="Ctrl"){
+            if (name==="ptid" || name==="Ctrl" || columns.includes(this.proptext_to_id[name]) ){
                 col.visible(true);
             } else {
                 col.visible(false);
@@ -1255,6 +1415,7 @@ class TableView{
 var unitFormView;
 var substanceFormView;
 var propChooserView;
+var isolineChooserView;
 var propEntryView;
 var plotView;
 var tableView;
@@ -1265,12 +1426,13 @@ var pointModel;
 $(document).ready(function(){
     // Instantiate classes with their targets
     pointModel = new PointModel();
-    unitFormView = new UnitFormView('#unitform');
-    substanceFormView = new SubstanceFormView('#sel_substance');
-    propChooserView = new PropChooserView("#property_selection")
-    propEntryView = new PropEntryView("#property_controls")
-    tableView = new TableView('#proptable');
-    plotView = new PlotView("plot");
+    unitFormView = new UnitFormView('unit_controls');
+    substanceFormView = new SubstanceFormView('substance_controls');
+    propChooserView = new PropChooserView("property_selection", PropChooserView.EVENT_PROPERTY_VISIBILITY);
+    isolineChooserView = new PropChooserView("isoline_selection", PropChooserView.EVENT_ISOLINE_VISIBILITY, ['T','d','p','s','h','x']);
+    propEntryView = new PropEntryView("property_controls");
+    tableView = new TableView('property_table');
+    plotView = new PlotView("plot_display");
 
     // getInfo is an async request, so use the callback to complete setup.
     getInfo((data)=>{
@@ -1285,18 +1447,23 @@ $(document).ready(function(){
         pointModel.addListener(tableView);
         pointModel.addListener(plotView);
         pointModel.addListener(propChooserView);
+        pointModel.addListener(isolineChooserView);
         pointModel.addListener(propEntryView);
 
         // Assign views to listen to the views that hold state data
         propChooserView.addListener(tableView);
         propChooserView.addListener(plotView);
 
+        isolineChooserView.addListener(plotView);
+
         // Call inits on views now that the properties exist
         tableView.init(get_output_properties());
+        plotView.init();
         unitFormView.init(get_valid_units(), get_units());
         substanceFormView.init(get_valid_substances(), get_substance(), get_display_substances());
         propChooserView.init(get_output_properties(), pointModel.DEFAULT_PROP_SHORTLIST);
-        propEntryView.init(get_input_properties());
+        isolineChooserView.init(get_output_properties(), ['T','p','x']);
+        propEntryView.init(get_input_properties(), get_unit_strings());
     });
 });
 
@@ -1391,10 +1558,14 @@ function get_units(){
     return pointModel.get_units();
 }
 
+function get_unit_strings(props=[]){
+    return pointModel.get_units_for_prop(props);
+}
+
 function set_units(units){
     pointModel.set_units(units);
     if (get_substance() != null){
-        get_auxline();
+        calc_auxline();
     }
 }
 
@@ -1415,10 +1586,10 @@ function compute_point(props, mode="POST"){
     props['id'] = get_substance();
 
     // TODO - Callbacks are hardcoded, keep or lose?
-    if (mode == "GET"){
+    if (mode === "GET"){
         $.get(requestroute, props, propResponseSuccess,dataType='json')
             .fail(propResponseFail);
-    } else if (mode == "POST") {
+    } else if (mode === "POST") {
         let postData = {state_input: props, units: get_units()};
         $.ajax({
             url: requestroute,
@@ -1434,12 +1605,13 @@ function compute_point(props, mode="POST"){
 
 /**
  * Async request for getting a state from the backend.
+ * @param callback - function handle to execute when complete
  * @param props - Dict with keys of property and numeric values
  * @param mode - GET/POST. Only POST can handle units with the request
  */
 function compute_auxline(callback, props={}, mode="POST"){
-    let requestroute = "";
-    if (Object.keys(props).length == 0) {
+    let requestroute;
+    if (Object.keys(props).length === 0) {
         requestroute = "/saturation";
     } else {
         requestroute = "/isoline"
@@ -1448,10 +1620,10 @@ function compute_auxline(callback, props={}, mode="POST"){
     // Add the substance ID to props always
     props['id'] = get_substance();
 
-    if (mode == "GET"){
+    if (mode === "GET"){
         $.get(requestroute, props, callback,dataType='json')
             .fail(propResponseFail);
-    } else if (mode == "POST") {
+    } else if (mode === "POST") {
         let postData = {state_input: props, units: get_units()};
         $.ajax({
             url: requestroute,
