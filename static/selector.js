@@ -30,7 +30,7 @@ function sel_init(){
 
     // Request the data from the server
     rqst.onload = sel_data_ready;
-    rqst.open('GET', 'http://127.0.0.1:5000/info');
+    rqst.open('GET', '/info');
     rqst.send();
 }
 
