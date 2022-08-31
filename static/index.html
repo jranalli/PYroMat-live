@@ -3,9 +3,15 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <script src="https://cdn.plot.ly/plotly-2.11.0.min.js"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <script src="../static/cookies.js" type="text/javascript"></script>
+    <script src="../static/components.js" type="text/javascript"></script>
     <script src="../static/script.js" type="text/javascript"></script>
 
+    <link rel="stylesheet" type="text/css" href="../static/style.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
 </head>
 <body>
@@ -17,7 +23,6 @@
         the units resets everything. Units only work when using POST.<br>
 
         <!--  Will be filled in by JS -->
-
     </div>
 
 
@@ -80,4 +85,8 @@
     </div>
 </div>
 </body>
+
+<script>
+    window.onload=init_page;
+</script>
 </html>
