@@ -1,12 +1,94 @@
 #!/usr/bin/python3
+"""PYroMat Gateway Interface module
+
+The PMGIRequest class is the parent of a number of child HTTP request
+handling classes.  The classes are initialized with a request object
+provided by the Flask package.  Request handling by any handler is done
+in three steps:
+
+(1) Initialization
+gather arguments, check data types+mandatory, initialize the four
+result members: data, units, args, mh.  In this step, any units-related
+arguments in the request are stripped from the args dict and added to
+the units dict with the resolved unit name (e.g. 'temperature' instead
+of 'uT').  The remaining values in args will be used by process().
+
+    rh = PropertyRequest(request)
+    rh.data     # Initialized to an empty dictionary
+    rh.units    # Loaded with any units found in the arguments
+    rh.args     # Loaded with any non-units arguments
+    rh.mh       # An initialized PMGIMessageHandler instance.
+
+(2) Process units
+Any units specified in the units dict are applied to the live PYroMat
+installation.  Any not specified are reset to their default values and
+recorded in the units dict, so all units will be reported every time.
+This is a separate step because it is not always necessary.  For example,
+informational calls have no need for units.
+
+    rh.process_units()
+    rh.units    # is now fully populated with the current units.
+    rh.mh       # evaluates to True if an error occurred
+
+(3) Process
+The process() method is where the core of the request handling code goes.
+This is where the relevant calculations are done.  Results should be
+stored in the data member so they will be found by the output step.
+
+    rh.process()
+    rh.data     # is now populated with the request results
+    rh.mh       # evaluates to True if an error occurred
+
+(4) Output
+The output() method assembles the contents of the data, units, args, and
+mh members into a JSON-friendly dict.  Output does NOT do additional
+post-processing like eliminating NaN values.  If necessary, that must be
+handled in process().
+
+    out = rh.output()
+    # out now contains 'data', 'args', 'units', and 'message' entries
+
+** UNITS **
+In the initialization step, before the individual classes enforce their
+unique requirements on the arguments, the prototype initializer strips
+out any arguments that appear to be specifying a unit definition.
+
+The simplest of these is an argument called 'units' set to a dictionary
+that may contain any of the keys found in the valid_units dict.  These
+are identical to the PYroMat config units, but with the leading 'unit_'
+stripped.  Their values may be any recognized unit for that setting.
+
+Because it requires a nested dict, this approach is probably only useful
+in POST requests.  For GET requests, units may be specified one-at-a-
+time using a shortened unit string.  A list of short unit specifiers
+and their corresponding value in the units dictionary is:
+
+    args    units
+    ---------------------
+    'uT'    'temperature'
+    'uE'    'energy'
+    'uMol'  'molar'
+    'uMas'  'mass'
+    'uM'    'matter'
+    'uV'    'volume'
+    'uP'    'pressure'
+    'uF'    'force'
+    'uL'    'length'
+    'uTim'  'time'
+
+Any units specifiers that are omitted will be loaded with their default
+values when process_units() is executed.  If process_units() is not
+called, the unit arguments are still separated out of the args dict, but
+they are ignored.
+"""
+
 import flask
 import pyromat as pm
 import numpy as np
-from flask import __version__ as flaskv
 from flask import Flask, request
 import sys
 
-__version__ = '0.0'
+__version__ = '0.1'
 
 
 # ### Helper functions
@@ -17,100 +99,160 @@ def toarray(a):
         return np.asarray(a.split(','), dtype=float)
 
 
-def compute_steamdome(subst, n=25):
-    """
-    Compute a steam dome for a given substance
-    :param subst: A pyromat substance object
-    :param n: int, a number of points per half of the dome
-    :return (satLiqProps, satVapProps): a dict of satliq/satvap property arrays
-    """
-
-    if not hasattr(subst, 'ps'):
-        raise pm.utility.PMParamError('Saturation states not available for '
-                                      f'{subst}.')
-
-    Tc, pc = subst.critical()
-    critical = subst.state(T=Tc, p=pc)
-    Tmin = subst.triple()[0]
-
-    # Find valid limits
-    Teps = (Tc - Tmin) / 1000
-
-    line_T = np.linspace(Tmin, Tc - Teps, n).flatten()
-    # line_T = np.logspace(np.log10(Tmin), np.log10(Tc-Teps), n).flatten()
-
-    sll, svl = compute_sat_state(subst, T=line_T)
-
-    # Append the critical point to the end of both lines
-    satliq_states = {}
-    satvap_states = {}
-    for k in sll:
-        satliq_states[k] = np.append(sll[k], critical[k])
-        satvap_states[k] = np.append(svl[k], critical[k])
-
-    return satliq_states, satvap_states
+def tobool(a):
+    if a.lower() in ['0', 'f', 'false']:
+        return False
+    return True
 
 
-def compute_sat_state(subst, **kwargs):
-    """
-    Compute a state given any set of state properties
-    :param subst: A pyromat substance object
-    :param kwargs: The thermodynamic property at which to compute the states
-                        specified by name. e.g. compute_sat_state(water, T=300)
-    :return: (satLiqProps, satVapProps) - A full description of the states
-                including all valid properties.
-                Valid properties are: p,T,v,d,e,h,s,x
-    """
+def ismultiphase(subst):
+    """Test whether the PYroMat substance instance is a multi-phase model
+    :param subst: A PYroMat substance instance
+    :return True/False:
+"""
+    # Explicitly list the supported classes
+    # This was my favorite of a few candidate algorithms.  It is quick,
+    # it ensures that the instance will have the correct property
+    # methods (which is really what you want to test for), and it will
+    # be immune from creating strange new substance models in the future.
+    testfor = ['mp1']
+    for thisclass in testfor:
+        if isinstance(subst, pm.reg.registry[thisclass]):
+            return True
+    return False
+    # There are a few other candidate algorithms we could consider:
+    # 1) We could test the substance's collection from its id string
+    #    This has advantages if we ever add ideal liquid, solid, or
+    #    other substance collections.
+    # 2) We could test for a complete list of mandatory property methods
+    #    This would ensure compatibility with the algorithm, but it
+    #    would be slower.
+    # 3) We could test for a single candidate property method (like ps)
+    #    This isn't bad, but it's prone to problems if we aren't careful
+    #    down the line.  However unlikely, it's possible that we'll make
+    #    a new substance model with ps() that has a different meaning.
 
-    if not hasattr(subst, 'ps'):
-        raise pm.utility.PMParamError('Saturation states not available for '
-                                      f'{subst}.')
 
-    kwargs = {k.lower(): v for k, v in kwargs.items()}
-    if 'p' in kwargs:
-        ps = np.array(kwargs['p']).flatten()
-        Ts = subst.Ts(p=ps)
-    elif 't' in kwargs:
-        Ts = np.array(kwargs['t']).flatten()
-        ps = subst.ps(T=Ts)
-    else:
-        raise pm.utility.PMParamError('Saturation state computation not '
-                                      'supported for {}.'.format(kwargs.keys))
+def json_friendly(unfriendly):
+    """Clean up an output dictionary or list for output as JSON.
+    friendly = json_friendly(unfriendly)
 
-    sf, sg = subst.ss(T=Ts)
-    hf, hg = subst.hs(T=Ts)
-    df, dg = subst.ds(T=Ts)
-    vf = 1 / df
-    vg = 1 / dg
-    ef, eg = subst.es(T=Ts)
-    xf = np.zeros_like(sf)
-    xg = np.ones_like(sg)
-    liq_state = {
-        'T': Ts,
-        'p': ps,
-        'd': df,
-        'v': vf,
-        'e': ef,
-        's': sf,
-        'h': hf,
-        'x': xf
-    }
-    vap_state = {
-        'T': Ts,
-        'p': ps,
-        'd': dg,
-        'v': vg,
-        'e': eg,
-        's': sg,
-        'h': hg,
-        'x': xg
-    }
-    return liq_state, vap_state
+This function recursively checks each value of the list or dict (and all
+child lists or dictionaries) for numpy data classes.  They are converted
+to lists in place or (if possible) they are converted to scalars.
+
+If the argument (unfriendly) is a list or dict, the same structure will
+be returned, but with the appropriate modifications made internally.
+If the argument is a numpy array, a list or scalar version will be
+returned.  As a result, it is not necessary to catch the return value
+unless a numpy array is passed explicitly.
+"""
+
+    # Handle numpy datatypes
+    if isinstance(unfriendly, np.ndarray):
+        if unfriendly.size == 1:
+            if np.isinf(unfriendly):
+                return "inf"
+            elif np.isnan(unfriendly):
+                return "nan"
+            else:
+                return np.asscalar(unfriendly)
+        if any(np.isinf(unfriendly)):
+            bad = np.isinf(unfriendly)
+            lst = unfriendly.tolist()
+            for i in np.where(bad)[0]:
+                lst[i] = "inf"
+            return lst
+        if any(np.isnan(unfriendly)):
+            bad = np.isnan(unfriendly)
+            lst = unfriendly.tolist()
+            for i in np.where(bad)[0]:
+                lst[i] = "nan"
+            return lst
+        return unfriendly.tolist()
+    # If this is a dict, recurse inside
+    elif isinstance(unfriendly, dict):
+        for name, value in unfriendly.items():
+            unfriendly[name] = json_friendly(value)
+    # If this is a list, recurse inside
+    elif isinstance(unfriendly, list):
+        for index, value in enumerate(unfriendly):
+            unfriendly[index] = json_friendly(value)
+    # Datatypes that aren't explicitly handled above are simply passed
+    # through with no modification
+    return unfriendly
+
+
+def clean_nan(dirty, ignore=["cp", "cv", "gam"]):
+    """Clean out nan values from a computed dict in place.
+    result = clean_nan( dirty )
+
+The PMGI has a number of use cases where arrays of equal length are
+returned inside of a dictionary or list with the intention that they be
+interpreted as varying together.  The PM property interface adds NaN
+values at points that are out-of-bounds or otherwise illegal.  If any
+arrays are found to have NaN values, those and the corresponding values
+of all other arrays are removed. A list of ignored keys can be supplied.
+
+On success, returns the number of NaN values found.
+
+If the arrays are found to have incompatible shapes, -1 is returned.
+"""
+
+    # Prepare an iterator for the dirty dataset
+    if isinstance(dirty, list):
+        iterator = enumerate(dirty)
+    elif isinstance(dirty, dict):
+        iterator = dirty.items()
+
+    # We'll keep track of the keys that need to be changed using
+    # a "change_keys" list.
+    change_keys = []
+
+    # indices will eventually become a boolean array indicating which
+    # of the values should be eliminated.
+    indices = None
+    for key, value in iterator:
+        # If this is a numpy array, we need to check it
+        if isinstance(value, np.ndarray):
+            change_keys.append(key)
+            ## If key in the ignore list, skip checking for nan
+            if key in ignore:
+                continue
+            # If this is the first numpy array found, init indices
+            if indices is None:
+                indices = np.isnan(value)
+            # If there are already indices, verify the shape
+            elif indices.shape == value.shape:
+                indices = np.logical_or(indices, np.isnan(value))
+            else:
+                return -1
+
+    # There were no numpy arrays!
+    if indices is None:
+        return 0
+
+    count = indices.sum()
+    # If necessary, go back and remove NaN entries
+    if count:
+        indices = np.logical_not(indices)
+        for key in change_keys:
+            dirty[key] = dirty[key][indices]
+    return count
 
 
 def get_practical_limits(subst):
-    multiphase = hasattr(subst, 'ps')
-    if multiphase:
+    """Return practical temperature and pressure boundaries for a substance
+    Tmin,pmin,Tmax,pmax = get_practical_limits( subst )
+
+Temeprature limits are always set based on the substance's Tlim() method,
+but ideal gas substance models have no explicit pressure limits, and
+most multi-phase minimum pressures are zero.  If the substance is a
+multiphase instance with zero minimum pressure, 10% of the triple point
+is used.  Ideal gas models use the pressure at T=Tmin,d=0.01 and T=Tmax,
+d=1000.
+"""
+    if ismultiphase(subst):
         pmin, pmax = subst.plim()
         Tt, pt = subst.triple()
         if pmin == 0:
@@ -285,6 +427,125 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
 
 ###
+# Back-end helper/handler classes
+#   These are responsible for automating some of the back-end tedium
+#   associated with HTTP error handling and
+###
+
+class PMGIMessageHandler:
+    """The Message Handler tracks errors, warnings, and accumulates messages
+to the client machine that are registered throughout the request handling
+process.
+
+The PMGIMessageHandler class has three "private" attributes,
+    _errorflag :: a boolean indicating whether an error occurred.
+    _warnflag :: a boolean indicating whether a warning occurred.
+    _messagestr :: the message text accumulated throughout the process
+
+Methods used to interact with the MessageHandler instance are:
+    error(message) :: Register an error with an appropriate message
+    warn(message) :: Register a warning with an appropriate message
+    message(message) :: Register a message without warning or error
+
+Methods and functions may return a PMGIMessageHandler as part of their
+normal operation.  PMGIMessageHandler instances may be combined in order
+using addition or the incrementer,
+
+mh1 = PMGIMessageHandler()
+... some code that modifies mh1 ...
+mh2 = some_function_that_returns_mh()
+mh1 += mh2
+
+At the conclusion of this code, mh1 includes the messages, warning, and
+error states from both the function and the prior code.
+"""
+
+    def __init__(self, copy=None):
+        self.clean()
+        if isinstance(copy, PMGIMessageHandler):
+            self._errorflag = bool(copy._errorflag)
+            self._warnflag = bool(copy._warnflag)
+            self._messagestr = str(copy._messagestr)
+        elif isinstance(copy, str):
+            self._messagestr = str(copy)
+        elif copy is not None:
+            raise Exception(
+                'A PMGIMessageHandler was initialized with a unhandled type: ' + repr(
+                    copy))
+
+    def clean(self):
+        """Clear the _errorflag, _warnflag, and _messagestr attributes
+    mh.clear()
+
+Clear should be called after the messages have been handled.
+"""
+        self._errorflag = False
+        self._warnflag = False
+        self._messagestr = ''
+
+    def error(self, message, prefix='ERROR: ', newline=True):
+        """Register an error, adding a prefix to its message, and appending a newline
+    mh.error(message, prefix='ERROR: ', newline=True)
+
+The message may be any string.  The prefix will be appended, so setting
+it to an empty string disables this behavior.  A trailing newline is
+always appended unless newline is set to False.
+
+Calling this method sets the _errorflag to True.
+"""
+        self._errorflag = True
+        self.message(message=message, prefix=prefix, newline=newline)
+
+    def warn(self, message, prefix='WARNING: ', newline=True):
+        """Register a warning, adding a prefix to its message, and appending a newline
+    mh.warn(message, prefix='WARN: ', newline=True)
+
+The message may be any string.  The prefix will be appended, so setting
+it to an empty string disables this behavior.  A trailing newline is
+always appended unless newline is set to False.
+
+Calling this method sets the _warnflag to True.
+"""
+        self._warnflag = True
+        self.message(message=message, prefix=prefix, newline=newline)
+
+    def message(self, message, prefix='', newline=True):
+        """Register a message without raising an error or warning
+    mh.message(message, prefix='', newline=True)
+
+The message method is like the error and warn methods, but there is no
+prefix by default, and the _errorflag and _warnflag attributes are not
+affected.
+"""
+        self._messagestr += prefix + message
+        if newline:
+            self._messagestr += '\n'
+
+    def tojson(self):
+        """Convert the PMGIMessageHandler instance to dict ready for JSON encoding
+    out = mh.tojson()
+
+out = {'message':mh._messagestr, 'error':mh._errorflag, 'warn:mh._warnflag}
+"""
+        return {'message': self._messagestr, 'error': self._errorflag,
+                'warn': self._warnflag}
+
+    def __add__(self, other):
+        # Make a copy of self
+        out = PMGIMessageHandler(self)
+        # Use iadd to complete the addition
+        out += other
+
+    def __iadd__(self, other):
+        self._errorflag = self._errorflag or other._errorflag
+        self._warnflag = self._warnflag or other._warnflag
+        self._messagestr = self._messagestr + other._messagestr
+
+    def __bool__(self):
+        return bool(self._errorflag)
+
+
+###
 # Custom request processing classes
 #   These are designed to construct a JSON dictionary that will be used
 #   by the HTML/JS on the client side to construct tables and plots.
@@ -292,138 +553,370 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
 
 class PMGIRequest:
+    """The PYroMat Gateway Interface Request class
 
-    def __init__(self):
-        self.args = {}
-        self.substance = None
-        self.out = {'error': False, 'message': ''}
+    pr = PMGIRequest( request )
 
-    def init_subst(self, idstr):
-        """INIT_SUBST - Retrieve a PYroMat object and fail gracefully
-            getid(idstr)
+The PMGIRequest class is a parent for the individual request handlers.
+Handler instances are intended to manage the different kinds of requests
+that come to the gateway interface while gracefully checking arguments
+and failing gracefully with appropriate HTTP error conditions and
+meaningful error messages.
 
-        Stores a PYroMat substance instance in the "s" member if successful.
-        If unsuccessful, error is set to True, and an appropriate message is
-        appended.
+request is the Flask request instance being processed, from which an
+arguments dictionary is constructed. Since PMGIRequest is merely a
+prototype for the individual request interfaces, it makes very few
+assumptions about these arguments.
 
-        Returns False on success and True on failure.
-        """
-        self.substance = pm.dat.data.get(idstr)
-        if self.substance is None:
-            self.out['error'] = True
-            self.out['message'] += f'Failed to find substance id {idstr}\n'
-            return True
-        return False
+The PMGIRequest and its children have four important attributes:
+    data    a dictionary containing JSON data resulting from the request
+    mh      a PMGIMessageHandler instance for the request
+    units   a dictionary containing units settings
+    args    a dictionary containing the request's parameters
+
+A request handling process should follow these steps:
+(1) Init
+    Each child class may define its own __init__ method, but it is
+    recommended that the first line be a call to
+    PMGIRequest.__init__(self, request).  This will automatically
+    translate the GET/POST arguments into the args attribute dict, and it
+    will automatically strip out units settings into the separate units
+    attribute dict.
+
+    Unit settings are either contained in an explicit 'units' dict or
+    one-by-one in a "short" format.  Legal units classes and their
+    supported values are enumerated in the legal_units attribute dict.
+    Their equivalent short form for explicit definition using the GET
+    method are mapped in the short_units attribute.
+
+    Next, each child class should make a call to the require() method as
+    a part of its own initialization.  This is where the child classes
+    assert the rules about which request parameters are allowed,
+    required, and their datatypes are asserted.
+
+    Finally, each unit class should take any special steps that are
+    unique to its request.  Many classes will not need to do anything
+    additional.
+
+(2) Process Units
+    Not all child classes will need to perform this step, but calling
+    process_units() will assert any units settings found in the
+    arguments.  See above for how units are specified.
+
+    Specified units will be asserted in the PYroMat configuration
+    system.  Unspecified units will be returned to their default and
+    written to the dictionary, so that they may be displayed by the live
+    page.
+
+(3) Process
+    There is a generic process() method defined by the parent
+    PMGIRequest prototype, but it does nothing.  Each child request
+    handler should define its own process method, which is responsible
+    for populating the data attribute.
+
+    The process() method is expected to write to the data or the mh
+    attributes, but it may only read from the units and args attributes.
+    Messaging should be handled by the mh.error(), mh.warn(),
+    and mh.message() methods.
+
+    The get_substance() is a method provided by PMGIRequest that will
+    probably be helpful in this step.
+
+(4) Output
+    The final output process should almost always be handled by the
+    PMGIRequest.output() prototype method.  It assembles the data, args,
+    units, and mh attributes into a standard JSON-compatible dictionary
+    and returns it.  Using the same output method for all classes
+    ensures that the PMGI output will always adopt a standard form, so
+    custom output() methods should be avoided.
+
+There are several methods that automate steps of this process.
+
+get_substance()
+    The get_substance() method is a wrapper around the PYroMat get()
+    function, but it handles error logging in the mh attribute if a
+    substance is not found or if some other error occurs.  Returns True
+    on failure and False on success.
+
+output()
+    The output method automates step 4, and is described above and in
+    its own in-line documentation.
+
+process_units()
+    The process_units() method is designed to automate step 2, and is
+    described above.  It handles error logging and returns True on
+    failure and False on success.
+"""
+
+    def __init__(self, request):
+        # Initialize the four parts of the output
+        self.mh = PMGIMessageHandler()
+        self.units = {}
+        self.data = {}
+        # Read in the request data to an args dict
+        if request.method == 'POST':
+            self.args = dict(request.json)
+        elif request.method == 'GET':
+            self.args = dict(request.args)
+        else:
+            self.args = {}
+
+        # Build legal unit dict
+        self.valid_units = {
+            'temperature': list(pm.units.temperature.get()),
+            'energy': list(pm.units.energy.get()),
+            'molar': list(pm.units.molar.get()),
+            'mass': list(pm.units.mass.get()),
+            'matter': list(pm.units.mass.get()) + list(pm.units.molar.get()),
+            'volume': list(pm.units.volume.get()),
+            'pressure': list(pm.units.pressure.get()),
+            'force': list(pm.units.force.get()),
+            'length': list(pm.units.length.get()),
+            'time': list(pm.units.time.get())
+        }
+        # The short units map abbreviated unit strings intended for the
+        # GET interface
+        self.short_units = {
+            'uT': 'temperature',
+            'uE': 'energy',
+            'uMol': 'molar',
+            'uMas': 'mass',
+            'uM': 'matter',
+            'uV': 'volume',
+            'uP': 'pressure',
+            'uF': 'force',
+            'uL': 'length',
+            'uTim': 'time'
+        }
+
+        # Process any units specifiers - strip them from the args
+        # dict as they are discovered.
+        # Look for a nested "units" dict
+        if 'units' in self.args:
+            # Pop out the units dictionary
+            self.units = self.args.pop('units')
+
+            if not isinstance(self.units, dict):
+                self.mh.error('The units argument was not a dictionary.')
+                return True
+        # If the units dict was not found, look for any short unit
+        # specifiers in the root arguments - probably for GET
+        else:
+            # We'll be changing the contents of args as we iterate, so
+            # we need to iterate on a copy of the argument keys
+            for shortunit in list(self.args.keys()):
+                # If this is a short unit, pop it out of args
+                # and add its long version to the newunits dict
+                if shortunit in self.short_units:
+                    longunit = self.short_units[shortunit]
+                    self.units[longunit] = self.args.pop(shortunit)
+
+        # Finally, test the units for correctness as we read them into
+        # the live units dict
+        for unit, value in self.units.items():
+            # Next, retrieve the legal values. If none are found, this
+            # is not a valid unit specifier string.
+            legal_values = self.valid_units.get(unit)
+            if legal_values is None:
+                self.mh.error('Unit not recognized: ' + str(unit))
+            # Is the assigned unit legal?
+            elif value not in self.valid_units[unit]:
+                self.mh.error('Unit (' + str(
+                    unit) + ') was set to unrecognized value: ' + str(value))
 
     def require(self, types, mandatory):
         """REQUIRE - enforce rules about the request arguments
-        require(types, mandatory)
+    require(types, mandatory)
 
-        TYPES       A dictionary of arguments and their types
-        MANDATORY   A list, set, or tuple of required argument names
+The require() method is intended to be called in each child request
+class to enforce that all arguments are recognized, a valid datatype,
+and that all mandatory arguments are present.  This method writes to
+the class's mh attribute automatically if errors or warnings are
+encountered.
 
-        Each keyword in TYPES corresponds to an argument that is allowed.  The
-        corresponding value in the dictionary must be a class or callable that
-        will be used to condition the argument's value.  For example,
-        specifying:
-            types = {'teamname': str, 'players': int, 'color': str}
-        defines three optional arguments and their types.  More complicated
-        requirements or conditioning can be applied in the appropriate __init__
-        definition.
+types       A dictionary of arguments and their types
+mandatory   A list, set, or tuple of required argument names
 
-        Once defined in TYPES, an argument can be made mandatory by including
-        its name in the MANDATORY list.
+Each keyword in TYPES corresponds to an argument that is allowed.  The
+corresponding value in the dictionary must be a class or callable that
+will be used to condition the argument's value.  For example,
+specifying:
+    types = {'teamname': str, 'players': int, 'color': str}
+defines three optional arguments and their types.  More complicated
+requirements or conditioning can be applied by assigning custom
+types or functions instead of existing types.
 
-        Returns True if an error occurs and False otherwise.
-        """
+Once defined in TYPES, an argument can be made mandatory by including
+its name in the MANDATORY list.
+
+Returns True if an error occurs and False otherwise.  Messages are
+logged appropriately in the mh attribute.
+"""
+        # Make a copy of the mandatory set.  We'll be keeping track!
         mandatory = set(mandatory)
         # Loop through the items
         for name, value in self.args.items():
             # Is this a recognized argument?
             if name not in types:
-                self.error(f'Unrecognized argument: {name}')
+                self.mh.error(f'Unrecognized argument: {name}')
                 return True
             # If the argument is known
             try:
                 self.args[name] = types[name](value)  # Cast to type
             except:
-                self.error(f'Invalid argument: {name}={value}')
+                self.mh.error(f'Invalid argument: {name}={value}')
                 return True
             # If the argument is mandatory, check it off the list
             if name in mandatory:
                 mandatory.remove(name)
         # Are there missing arguments?
         if mandatory:
-            self.error(f'Missing mandatory arguments:')
-            prefix = ' '
+            self.mh.error('Missing mandatory arguments: ', newline=False)
+            prefix = ''
             for name in mandatory:
-                self.warn(prefix + name, append_newline=False)
+                self.mh.message(name, prefix=prefix, newline=False)
                 prefix = ', '
-            self.warn('')
+            # Force a newline
+            self.mh.message('')
             return True
         return False
 
-    def error(self, message, append_newline=True):
-        """
-        Set flag for error and append an error message.
-        """
-        self.out['error'] = True
-        self.out['message'] += message
-        if append_newline:
-            self.out['message'] += "\n"
+    def process_units(self):
+        """Assign the units discovered in the arguments to PYroMat's settings
+    process_units()
 
-    def warn(self, message, append_newline=True):
-        """
-        Append warning messages.
-        """
-        self.out['message'] += message
-        if append_newline:
-            self.out['message'] += "\n"
+Uses the dict stored in the units attribute to determine which (if any)
+units need to be changed from the default.  If units is empty, no changes
+are made.
 
-    @staticmethod
-    def json_friendly(somedict):
-        """
-        Clean up the out dictionary for output as JSON.
-        """
+Units specified in the units dict are modified in the PYroMat system.
+Other units found in the PMyroMat system are recorded in the units dict
+to record the system's units status.
 
-        if isinstance(somedict, dict):
-            for name, value in somedict.items():
-                if isinstance(value, dict) or isinstance(value, list):
-                    PMGIRequest.json_friendly(value)
-                elif isinstance(value, np.ndarray):
-                    if value.size == 1:
-                        somedict[name] = np.asscalar(value)
-                    else:
-                        somedict[name] = value.tolist()
-        elif isinstance(somedict, list):
-            for item in somedict:
-                PMGIRequest.json_friendly(item)
-
-    @staticmethod
-    def clean_nan(somedict):
-        """
-        Clean out nan values from a computed dict in place. Requires a dict of np arrays of equal length
-        """
-
-        if not hasattr(somedict, 'items') and isinstance(somedict, list):
-            for item in somedict:
-                PMGIRequest.clean_nan(item)
-            return
-
-        indices = np.array([], dtype=bool)
-        for name, value in somedict.items():
-            if isinstance(value, np.ndarray):
-                if indices.size == 0:
-                    indices = np.isnan(value)
+Returns True in the event of an error.  On success, returns False.
+"""
+        if self.mh:
+            self.mh.message('Unit processing aborted due to an error.')
+            return True
+        # Loop through all possible parameters, and only work on the
+        # units.
+        for param in pm.config:
+            if param.startswith('unit_'):
+                unit = param[5:]
+                # If the unit was specified in the configuration
+                if unit in self.units:
+                    try:
+                        pm.config[param] = self.units[unit]
+                    except:
+                        self.mh.error('Failed to set the units as configured.')
+                        self.mh.message(repr(sys.exc_info()[1]))
+                        return True
+                # If it was not specified, return it to its default value
+                # and record it for the output record
                 else:
-                    indices = np.bitwise_or(indices, np.isnan(value))
-            elif isinstance(value, dict):
-                PMGIRequest.clean_nan(value)
+                    pm.config.restore_default(param)
+                    self.units[unit] = pm.config[param]
+        return False
 
-        if indices.any():
-            good = np.bitwise_not(indices)
-            for name in somedict:
-                somedict[name] = somedict[name][good]
+    def get_substance(self, idstr):
+        """Wrapper function for pm.get() that registers appropriate error messages
+    substance = get_substance(idstr)
+
+The idstr is the ID string used by get().
+"""
+        substance = None
+        try:
+            substance = pm.get(idstr)
+        except pm.utility.PMParamError:
+            self.mh.error('Substance not found: ' + str(idstr))
+        except:
+            self.mh.error(
+                'There was an unexpected error retrieving substance: ' + str(
+                    idstr))
+            self.mh.message(repr(sys.exc_info()[1]))
+        return substance
+
+    def process(self):
+        """This is a prototype for a request process method.
+    pr.process()
+
+The process method is responsible for populating the data attribute.
+"""
+        # If there was an error, abort
+        if self.mh:
+            self.mh.message('Aborted processing due to an error')
+            return True
+
+        # interesting code for generating data here...
+        self.data = {}
+
+        return False
+
+    def output(self):
+        """Generate the serializable output of the process request.
+"""
+        return {
+            'data': json_friendly(self.data),
+            'message': self.mh.tojson(),
+            'units': self.units,
+            'args': json_friendly(self.args)
+        }
+
+
+class SubstanceRequest(PMGIRequest):
+    """This class handles substance metadata requests
+"""
+    inprops = ['e', 'h', 's', 'T', 'p', 'd', 'v', 'x']
+    outprops = inprops + ['cp', 'cv', 'gam']
+
+    def __init__(self, args):
+        PMGIRequest.__init__(self, args)
+        self.require(types={
+            'id': str},
+            mandatory=['id'])
+
+    def process(self):
+        # If there was an error, abort the processing
+        if self.mh:
+            self.mh.message('Processing aborted due to error.')
+            return True
+
+        # Copy the args and pop out the id entry
+        # Everything that's left will be arguments to the state method
+        args = self.args.copy()
+        subst = self.get_substance(args.pop('id'))
+        if subst is None:
+            return True
+
+        try:
+            self.data['id'] = subst.data['id']
+            self.data['mw'] = subst.mw()
+            self.data['names'] = subst.names()
+            self.data['col'] = subst.collection()
+            self.data['cls'] = subst.pmclass()
+            self.data['inchi'] = subst.inchi()
+            self.data['casid'] = subst.casid()
+            self.data['atoms'] = subst.atoms()
+            self.data['doc'] = subst.data.get('doc')
+            if self.data['cls'] in ['mp1']:
+                self.data['Tc'], self.data['pc'], self.data[
+                    'dc'] = subst.critical(density=True)
+                self.data['Tt'], self.data['pt'] = subst.triple()
+
+            self.data['inprops'] = self.inprops
+            self.data['outprops'] = self.outprops
+            for prop in self.outprops:
+                if not hasattr(subst, prop):
+                    self.data['outprops'].remove(prop)
+                    if prop in self.data['inprops']:
+                        self.data['inprops'].remove(prop)
+
+        except pm.utility.PMParamError:
+            self.mh.error('Failed to generate parameter set.')
+            self.mh.message(repr(sys.exc_info()[1]))
+            return True
+
+        return False
 
 
 class PropertyRequest(PMGIRequest):
@@ -431,38 +924,21 @@ class PropertyRequest(PMGIRequest):
     This class will handle requests for properties at a fixed state or states.
     """
 
-    def __init__(self, args, units=None):
+    def __init__(self, args):
         # Clean initialization
-        PMGIRequest.__init__(self)
-
-        # Read in the arguments from raw
-        self.args = dict(args)
+        PMGIRequest.__init__(self, args)
         # Process the arguments
-        if self.require(
-                types={
-                    's': toarray,
-                    'h': toarray,
-                    'e': toarray,
-                    'T': toarray,
-                    'p': toarray,
-                    'd': toarray,
-                    'v': toarray,
-                    'x': toarray,
-                    'id': str
-                },
-                mandatory=['id']):
-            return
-
-        # Config the units
-        if units is not None:
-            try:
-                InfoRequest.set_units(units)
-            except pm.utility.PMParamError as e:
-                self.error(e.args[0])
-
-        # Retrieve the PM entry
-        if self.init_subst(self.args['id']):
-            return
+        self.require(types={
+            's': toarray,
+            'h': toarray,
+            'e': toarray,
+            'T': toarray,
+            'p': toarray,
+            'd': toarray,
+            'v': toarray,
+            'x': toarray,
+            'id': str},
+            mandatory=['id'])
 
     def process(self):
         """Process the request
@@ -470,54 +946,25 @@ class PropertyRequest(PMGIRequest):
         correctly formatted data that can be returned as a JSON object.
         """
         # If there was an error, abort the processing
-        if self.out['error']:
-            return
-        elif not isinstance(self.substance, pm.reg.__basedata__):
-            self.error('Substance data seems to be corrupt!  Halting.')
-            return
+        if self.mh:
+            self.mh.message('Processing aborted due to error.')
+            return True
 
-        #
-        # Case out whether to use ideal gas or multi-phase processing
-        #
-        if self.substance.data['id'].startswith('ig'):
-            self._ig_process()
-        elif self.substance.data['id'].startswith('mp'):
-            self._mp_process()
-        else:
-            self.error(f'Could not determine the collection for substance: '
-                       f'{self.substance.data["id"]}')
-            return
-
-        # Finally, clean up the return parameters
-        PMGIRequest.clean_nan(self.out['data'])
-        PMGIRequest.json_friendly(self.out)
-
-    def _ig_process(self):
-        return self._mp_process()  # works for now
-
-    def _mp_process(self):
-        """_mp_process
-
-        The _mp_process and _ig_process methods are responsible for casing out
-        the different valid property combinations to calculate all the rest.
-        """
+        # Copy the args and pop out the id entry
+        # Everything that's left will be arguments to the state method
         args = self.args.copy()
-        self.out['inputs'] = self.args
-        # Leave only the property arguments
-        args.pop('id')
+        subst = self.get_substance(args.pop('id'))
+        if subst is None:
+            return True
 
         try:
-            self.out['data'] = self.substance.state(**args)
-        except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
-            # Add in the error response from pyromat
-            self.error(e.args[0])
-            self.error('Args found:', append_newline=False)
-            prefix = '  '
-            for name in args:
-                self.warn(prefix + name, append_newline=False)
-                prefix = ', '
-            self.warn('')
-            return
+            self.data = subst.state(**args)
+        except pm.utility.PMParamError:
+            self.mh.error('Failed to generate parameter set.')
+            self.mh.message(repr(sys.exc_info()[1]))
+            return True
+
+        return False
 
 
 class IsolineRequest(PMGIRequest):
@@ -525,39 +972,22 @@ class IsolineRequest(PMGIRequest):
     This class will handle requests for an isoline
     """
 
-    def __init__(self, args, units=None):
+    def __init__(self, args):
         # Clean initialization
-        PMGIRequest.__init__(self)
+        PMGIRequest.__init__(self, args)
 
-        # Read in the arguments from raw
-        self.args = dict(args)
-        # Process the arguments
-        if self.require(
-                types={
-                    's': toarray,
-                    'h': toarray,
-                    'e': toarray,
-                    'T': toarray,
-                    'p': toarray,
-                    'd': toarray,
-                    'v': toarray,
-                    'x': toarray,
-                    'default': str,
-                    'id': str
-                },
-                mandatory=['id']):
-            return
-
-        # Config the units
-        if units is not None:
-            try:
-                InfoRequest.set_units(units)
-            except pm.utility.PMParamError as e:
-                self.error(e.args[0])
-
-        # Retrieve the PM entry
-        if self.init_subst(self.args['id']):
-            return
+        self.require(types={
+            's': toarray,
+            'h': toarray,
+            'e': toarray,
+            'T': toarray,
+            'p': toarray,
+            'd': toarray,
+            'v': toarray,
+            'x': toarray,
+            'default': str,
+            'id': str},
+            mandatory=['id'])
 
     def process(self):
         """Process the request
@@ -565,24 +995,27 @@ class IsolineRequest(PMGIRequest):
         correctly formatted data that can be returned as a JSON object.
         """
         # If there was an error, abort the processing
-        if self.out['error']:
-            return
-        elif not isinstance(self.substance, pm.reg.__basedata__):
-            self.error('Substance data seems to be corrupt!  Halting.')
-            return
+        if self.mh:
+            self.mh.message('Processing aborted due to error.')
+            return True
 
         args = self.args.copy()
-        self.out['inputs'] = self.args
         # Leave only the property arguments
-        args.pop('id')
+        subst = self.get_substance(args.pop('id'))
+        if subst is None:
+            return True
 
         try:
-            self.out['data'] = compute_iso_line(self.substance, n=50, **args)
-            PMGIRequest.clean_nan(self.out['data'])
-            PMGIRequest.json_friendly(self.out)
+            self.data['data'] = compute_iso_line(subst, n=50, **args)
+            if isinstance(self.data['data'], list):
+                for row in self.data['data']:
+                    clean_nan(row)  # TODO Kludge clean_nan not working on list
+            else:
+                clean_nan(self.data['data'])
         except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
-            self.error(e.args[0])
-        # Finally, clean up the return parameters
+            self.mh.error('Failed to generate isoline.')
+            self.mh.message(repr(sys.exc_info()[1]))
+            return True
 
 
 class SaturationRequest(PMGIRequest):
@@ -590,32 +1023,17 @@ class SaturationRequest(PMGIRequest):
     This class will handle requests for saturation properties.
     """
 
-    def __init__(self, args, units=None):
+    def __init__(self, request):
         # Clean initialization
-        PMGIRequest.__init__(self)
-
-        # Read in the arguments from raw
-        self.args = dict(args)
+        PMGIRequest.__init__(self, request)
         # Process the arguments
-        if self.require(
-                types={
-                    'T': toarray,
-                    'p': toarray,
-                    'id': str
-                },
-                mandatory=['id']):
-            return
-
-        # Config the units
-        if units is not None:
-            try:
-                InfoRequest.set_units(units)
-            except pm.utility.PMParamError as e:
-                self.error(e.args[0])
-
-        # Retrieve the PM entry
-        if self.init_subst(self.args['id']):
-            return
+        self.require(
+            types={
+                'T': toarray,
+                'p': toarray,
+                'id': str
+            },
+            mandatory=['id'])
 
     def process(self):
         """Process the request
@@ -625,166 +1043,134 @@ class SaturationRequest(PMGIRequest):
         If no property is specified, the entire steam dome will be returned
         """
         # If there was an error, abort the processing
-        if self.out['error']:
-            return
-        elif not isinstance(self.substance, pm.reg.__basedata__):
-            self.error('Substance data seems to be corrupt!  Halting.')
-            return
+        if self.mh:
+            self.mh.message('Processing aborted due to error.')
+            return True
 
-        if self.substance.data['id'].startswith('mp'):
-            if not ('p' in self.args or 'T' in self.args):
-                self._mp_steamdome_process()
-            else:
-                self._mp_process()
-        else:
-            self.error(f'Substance does not have saturation properties: '
-                       f'{self.substance.data["id"]}')
-            return
-
-        # Finally, clean up the return parameters
-        PMGIRequest.clean_nan(self.out['data']['liquid'])
-        PMGIRequest.clean_nan(self.out['data']['vapor'])
-        PMGIRequest.json_friendly(self.out)
-
-    def _mp_process(self):
-        """_mp_process
-
-        computes a full state of saturation properties
-        """
+        # Copy the args and pop out the id entry
+        # Everything that's left will be arguments to the state method
         args = self.args.copy()
-        self.out['inputs'] = self.args
-        # Leave only the property arguments
-        args.pop('id')
+        subst = self.get_substance(args.pop('id'))
+        # get_substance() handles error logging for us - we only need to
+        # return True if it fails.
+        if subst is None:
+            return True
+        # Throw an error if the substance is not multi-phase
+        if not ismultiphase(subst):
+            self.mh.error(
+                'Substance was not in the multi-phase collection: ' + repr(
+                    subst))
+            return True
 
+        ## This segment of code is strictly responsible for generating
+        # an array of temperature values to use
+
+        # If there are no arguments, then generate a default set of
+        # values
+        if len(args) == 0:
+            Tc, pc = subst.critical()
+            Tt, pt = subst.triple()
+            ep = (Tc - Tt) * .001
+            Ts = np.linspace(Tt + ep, Tc - ep, 31)
+        # Test for over-defined states
+        elif len(args) > 1:
+            self.mh.error('Saturation properties require only one argument.')
+            return True
+        # If T is specified, this is easy
+        elif 'T' in args:
+            Ts = args['T']
+        # If p is specified, we'll need to calculate T
+        elif 'p' in args:
+            try:
+                Ts = subst.Ts(p=args['p'])
+            except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
+                self.mh.error(
+                    'Failed to obtain temperature at the pressure(s) provided.')
+                self.mh.message(repr(e))
+                return True
+        # This should never happen - fail loudly.
+        else:
+            self.mh.error(
+                'Unhandled SaturationRequest error! Please file a bug report.')
+            return True
+
+        # OK, we've got Ts - go calculate the state
         try:
-            liq, vap = compute_sat_state(self.substance, **args)
-            self.out['data'] = {}
-            self.out['data']['liquid'] = liq
-            self.out['data']['vapor'] = vap
+            dsL, dsV = subst.ds(T=Ts)
+            self.data['liquid'] = subst.state(T=Ts, d=dsL)
+            self.data['vapor'] = subst.state(T=Ts, d=dsV)
+            # Throw away the liquid pressure - it is not numerically correct.
+            self.data['liquid']['p'] = self.data['vapor']['p']
         except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
-            # Add in the error response from pyromat
-            self.error(e.args[0])
-            return
+            self.mh.error(
+                'Failed to evaluate saturation properties at the state(s) provided.')
+            self.mh.message(repr(e))
+            return True
 
-    def _mp_steamdome_process(self):
-        """
-        _mp_steamdome_process
+        count = clean_nan(self.data['liquid']) \
+                + clean_nan(self.data['vapor'])
+        if count:
+            self.mh.warn(
+                'Encountered states that were out of bounds for this substance model.')
 
-        Compute the entire steam dome for the substance
-        """
-        try:
-            liq, vap = compute_steamdome(self.substance)
-
-            self.out['data'] = {}
-            self.out['data']['liquid'] = liq
-            self.out['data']['vapor'] = vap
-
-        except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
-            # Add in the error response from pyromat
-            self.error(e.args[0])
-            return
+        return False
 
 
 class InfoRequest(PMGIRequest):
     """
-    This class will handle generic info requests about pyromat data
-    """
-    _valid_unit_strs = ['energy', 'pressure', 'temperature', 'matter',
-                        'volume']
+This class will handle generic info requests about pyromat data
+"""
 
-    def __init__(self):
-        # Clean initialization
-        PMGIRequest.__init__(self)
+    def __init__(self, args):
+        PMGIRequest.__init__(self, args)
+
+        self.require(types={
+            'substances': tobool,
+            'legalunits': tobool,
+            'versions': tobool}, mandatory=[])
 
     def process(self):
         """Process the request
-        This method is responsible for populating the "out" member dict with
-        correctly formatted data that can be returned as a JSON object.
-        """
-        self.out['substances'] = InfoRequest.list_valid_substances()
-        self.out['units'] = InfoRequest.get_units()
-        self.out['valid_units'] = InfoRequest.list_valid_units()
-        # If there was an error, abort the processing
-        if self.out['error']:
-            return
+This method is responsible for populating the "out" member dict with
+correctly formatted data that can be returned as a JSON object.
+"""
+        # If there was an error, abort
+        if self.mh:
+            self.mh.message('Aborted processing due to an error')
+            return True
 
-        # Finally, clean up the return parameters
-        PMGIRequest.json_friendly(self.out)
+        # Should we obtain the list of substances?
+        subst_flag = self.args.get('substances')
+        subst_dict = {}
+        # If substances was not set or was set to True
+        if subst_flag is None or subst_flag:
+            for idstr, subst in pm.dat.data.items():
+                subst_dict[idstr] = {
+                    'cls': subst.pmclass(),
+                    'col': subst.collection(),
+                    'nam': subst.names(),
+                    'mw': subst.mw()}
+        self.data['substances'] = subst_dict
 
-    @staticmethod
-    def set_units(units):
-        units = dict(units)
+        # Should we obtain the list of valid units?
+        units_flag = self.args.get('legalunits')
+        units_dict = {}
+        if units_flag is None or units_flag:
+            units_dict = self.valid_units.copy()
+        self.data['legalunits'] = units_dict
 
-        for name, value in units.items():
-            if name in InfoRequest._valid_unit_strs and \
-                    value in InfoRequest.list_valid_units(name):
-                pm.config['unit_' + name] = value
-            else:
-                raise pm.utility.PMParamError("Invalid unit specification:"
-                                              f"{name}={value}")
-
-    @staticmethod
-    def get_units():
-        out = {}
-        cfg = pm.config
-        for key in cfg.entries:
-            if key.startswith('unit') and \
-                    key.split('_')[1] in InfoRequest._valid_unit_strs:
-                out[key.split('_')[1]] = cfg[key]
-        return out
-
-    @staticmethod
-    def list_valid_substances(search_str=None):
-        proplist_out = ['T', 'p', 'd', 'v', 'e', 'h', 's', 'x',
-                        'cp', 'cv', 'gam']
-        proplist_in = ['T', 'p', 'd', 'v', 'e', 'h', 's', 'x']
-        out = {}
-        dat = pm.search(search_str)
-        for subst in dat:
-            key = subst.data['id']
-            out[key] = {}
-            out[key]['prefix'] = subst.data['id'].split('.')[0]
-            out[key]['id'] = subst.data['id']
-            out[key]['class'] = subst.data['class']
-            if 'names' in subst.data:
-                out[key]['names'] = subst.data['names']
-            else:
-                out[key]['names'] = []
-            out[key]['props'] = []
-            for prop in proplist_out:
-                if hasattr(subst, prop):
-                    out[key]['props'].append(prop)
-            out[key]['inputs'] = []
-            for prop in proplist_in:
-                if hasattr(subst, prop):
-                    out[key]['inputs'].append(prop)
-        return out
-
-    @staticmethod
-    def list_valid_units(units=None):
-        out = {}
-
-        if units is None:
-            units = InfoRequest._valid_unit_strs
-
-        if type(units) is str:
-            if units == 'matter':
-                mass = list(pm.units.mass.get())
-                molar = list(pm.units.molar.get())
-                out = mass + molar
-            else:
-                unitfun = getattr(pm.units, units)
-                out = list(unitfun.get())
-        else:
-            for unit in units:
-                if unit == 'matter':
-                    mass = list(pm.units.mass.get())
-                    molar = list(pm.units.molar.get())
-                    out[unit] = mass + molar
-                else:
-                    unitfun = getattr(pm.units, unit)
-                    out[unit] = list(unitfun.get())
-        return out
+        # Should we obtain the version information?
+        version_flag = self.args.get('versions')
+        version_dict = {}
+        if version_flag is None or version_flag:
+            version_dict = {
+                'python': sys.version.split()[0],
+                'flask': flask.__version__,
+                'pyromat': pm.config['version'],
+                'pmgi': __version__,
+                'numpy': np.version.full_version,
+            }
+        self.data['versions'] = version_dict
 
 
 ############################
@@ -798,113 +1184,67 @@ app = Flask(__name__)
 # will redirect here - to root.
 
 
-# The root pmgi accepts property requests.
-@app.route('/', methods=['POST', 'GET'])
-def pmgi():
-    # Read in the request data to an args dict
-    if request.method == 'POST':
-        jsondat = dict(request.json)
-        args = jsondat['state_input']
-        units = None
-        if 'units' in jsondat:
-            units = (jsondat['units'])
-        pr = PropertyRequest(args, units)
-    elif request.method == 'GET':
-        args = dict(request.args)
-        pr = PropertyRequest(args)
+# Sitemap:
+# /substance
+#
+#   Return meta information about a specific substance
+#
+# /state
+#   Return property information at a state or array of states
+#
+# /saturation
+#   Return property information along a saturation line
+#
+# /isoline
+#   Return property information while holding a single property constant
+#
+# /info
+#   Return meta information about the active installation of PYroMat
 
+@app.route('/subst', methods=['POST', 'GET'])
+def substance():
+    sr = SubstanceRequest(request)
+    sr.process_units()
+    sr.process()
+    return sr.output(), 200
+
+
+# The root pmgi accepts property requests.
+@app.route('/state', methods=['POST', 'GET'])
+def state():
+    pr = PropertyRequest(request)
+    pr.process_units()
     pr.process()
 
-    # Check for error and return code
-    if pr.out['error']:
-        return pr.out, 500
-    else:
-        return pr.out, 200
+    return pr.output(), 200
 
 
 # The saturation route computes saturation points or the steam dome
 @app.route('/saturation', methods=['POST', 'GET'])
-def sat():
-    # Read in the request data to an args dict
-    if request.method == 'POST':
-        jsondat = dict(request.json)
-        args = jsondat['state_input']
-        units = None
-        if 'units' in jsondat:
-            units = (jsondat['units'])
-        sr = SaturationRequest(args, units)
-    elif request.method == 'GET':
-        args = dict(request.args)
-        sr = SaturationRequest(args)
-
+def saturation():
+    sr = SaturationRequest(request)
+    sr.process_units()
     sr.process()
-
-    # Check for error and return code
-    if sr.out['error']:
-        return sr.out, 500
-    else:
-        return sr.out, 200
+    return sr.output(), 200
 
 
 # The isoline route computes isolines
 @app.route('/isoline', methods=['POST', 'GET'])
-def iso():
+def isoline():
     # Read in the request data to an args dict
-    if request.method == 'POST':
-        jsondat = dict(request.json)
-        args = jsondat['state_input']
-        units = None
-        if 'units' in jsondat:
-            units = (jsondat['units'])
-        isr = IsolineRequest(args, units)
-    elif request.method == 'GET':
-        args = dict(request.args)
-        isr = IsolineRequest(args)
-
+    isr = IsolineRequest(request)
+    isr.process_units()
     isr.process()
-
-    # Check for error and return code
-    if isr.out['error']:
-        return isr.out, 500
-    else:
-        return isr.out, 200
-
-
-# The get pmgi returns substance metadata
-@app.route('/get', methods=['POST', 'GET'])
-def get():
-    out = {}
-    if request.method == 'POST':
-        pass
-    elif request.method == 'GET':
-        pass
-    return out
+    return isr.output(), 200
 
 
 # The info pmgi will return the results of queries (e.g. substance search)
 @app.route('/info', methods=['POST', 'GET'])
 def info():
-    ir = InfoRequest()
+    ir = InfoRequest(request)
+    ir.process_units()
     ir.process()
-    if ir.out['error']:
-        return ir.out, 500
-    else:
-        return ir.out, 200
-
-
-# Version is responsible for returning basic system information
-# This will be important if users want to diagnose differences between
-# local pyromat behaviors and webserver responses.
-@app.route('/version')
-def meta():
-    out = {
-        'python': sys.version.split()[0],
-        'flask': flaskv,
-        'pyromat': pm.config['version'],
-        'pmgi': __version__,
-        'numpy': np.version.full_version,
-    }
-    return out
+    return ir.output(), 200
 
 
 # ##### DELETE ME FOR DEPLOY - ROUTE FOR SERVING STATIC HTML DURING DEV:
