@@ -44,86 +44,18 @@ class Subject {
     }
 }
 
-/**
- * Class to hold data about the thermodynamic substance including a list of
- * values that has been computed
- */
-class DataModel extends Subject{
-    // Several event IDs thrown by this
+
+class UnitModel extends Subject{
     static EVENT_UNIT = 'unit'; // Data will be get_unit()
-    static EVENT_SUBSTANCE = 'substance'; // Data will be get_substance()
-    static EVENT_POINT_ADD = 'point_add' // Data will be the added point
-    static EVENT_POINT_DELETE = 'point_delete' // Data will be id of deleted point
-    static EVENT_INIT_POINTS = 'init_pts'; // Data will be null
-    static EVENT_INIT_AUXLINE = 'init_aux'; // Data will be null
-    static EVENT_AUXLINE_ADD = 'auxline_add'; // data will be the added line
-    static EVENT_AUXLINE_DELETE = 'auxline_del'; // data will be the id of the deleted line
 
-    DEFAULT_SUB_SHORTLIST=["mp.H2O","mp.C2H2F4","ig.air","ig.O2", "ig.N2"];
-    DEFAULT_PROP_OUT_SHORTLIST=["T","p","v","d","e","h","s","x","cp","cv","gam"];
-    DEFAULT_PROP_IN_SHORTLIST=["T","p","v","d","e","h","s","x"];
-    DEFAULT_SUBSTANCE = 'mp.H2O';
-    INIT_PT_ID = 1;
-    INIT_AUX_ID = 1;
-
-    constructor() {
+    constructor(valid_units, active_units){
         super();
-        // Init this.points and this.auxlines
-        this.init_auxlines();
-        this.init_points();
-
-        // Current units, and all possible units
-        this.units = null;
-        this.valid_units = null;
-
-        // Current substance and all possible substances
-        this.substance = null;
-        this.valid_substances = null;
-    }
-
-    /**
-     * Initialize the valid units and substance lists
-     * @param valid_units - dict of valid units, keys are unit category,
-     *                          values are arrays of legal values
-     * @param valid_substances - dict of valid substances, keys are the
-     *                             substance id, values are a dict with info
-     *                             from PMGI
-     */
-    init_info(valid_units, valid_substances){
         this.valid_units = valid_units;
-        this.valid_substances = valid_substances;
-    }
-
-    /**
-     * Clear all auxiliary lines stored and get ready to start over
-     */
-    init_auxlines() {
-        this.aux_id = this.INIT_AUX_ID;
-        this.aux_lines = {}
-        this.aux_lines['global'] = []
-
-        this.notify(this, DataModel.EVENT_INIT_AUXLINE, null);
-    }
-
-    /**
-     * Clear all points stored and get ready to start over.
-     */
-    init_points(){
-        this.points = {};
-        this.point_id = this.INIT_PT_ID;
-
-        let keys = this.get_output_properties();
-        keys.push('ptid');
-        keys.forEach((key) =>{
-            this.points[key] = [];
-        });
-
-        // Keep the global aux lines (i.e. assume substance constant)
-        let gl = this.aux_lines['global'];
-        this.aux_lines = {};
-        this.aux_lines['global'] = gl;
-
-        this.notify(this, DataModel.EVENT_INIT_POINTS, null);
+        this.set_units = this.set_units.bind(this);
+        this.get_units = this.get_units.bind(this);
+        this.get_valid_units = this.get_valid_units.bind(this);
+        this.get_units_for_prop = this.get_units_for_prop.bind(this);
+        this.set_units(active_units);
     }
 
     /**
@@ -133,27 +65,23 @@ class DataModel extends Subject{
      */
     set_units(units){
         this.units = units;
-        // Reset everything
-        this.init_auxlines();
-        this.init_points();
-        this.notify(this, DataModel.EVENT_UNIT, this.get_units())
+        this.notify(this, UnitModel.EVENT_UNIT, this.get_units())
     }
 
     /**
-     * Change the current substance. This invalidates all stored point data
-     * @param substance - a string for the substance. Must be in valid_substances.
+     * Get the current unit set
+     * @returns units - a dict of the current units. Keys are unit category,
+     *                  values are the unit value
      */
-    set_substance(substance){
-        if (!substance in this.valid_substances){
-            throw new Error("Not a valid substance");
+    get_units(){
+        if (this.units != null) {
+            return this.units;
+        } else {
+            return [];
         }
-        this.substance = substance;
-        this.init_auxlines();
-        this.init_points();
-        this.notify(this, DataModel.EVENT_SUBSTANCE, this.get_substance())
     }
 
-    /**
+     /**
      * Get all valid units for PMGI
      * @returns valid_units - dict of valid units, keys are unit category,
      *                             values are arrays of legal values
@@ -164,15 +92,6 @@ class DataModel extends Subject{
         } else {
             return [];
         }
-    }
-
-    /**
-     * Get the current unit set
-     * @returns units - a dict of the current units. Keys are unit category,
-     *                  values are the unit value
-     */
-    get_units(){
-        return this.units;
     }
 
     /**
@@ -214,15 +133,66 @@ class DataModel extends Subject{
             return unitstrs;
         }
     }
+}
+
+
+/**
+ * Class to hold data about the thermodynamic substance including a list of
+ * values that has been computed
+ */
+class DataModel extends Subject{
+    // Several event IDs thrown by this
+    static EVENT_POINT_ADD = 'point_add' // Data will be the added point
+    static EVENT_POINT_DELETE = 'point_delete' // Data will be id of deleted point
+    static EVENT_INIT_POINTS = 'init_pts'; // Data will be null
+    static EVENT_INIT_AUXLINE = 'init_aux'; // Data will be null
+    static EVENT_AUXLINE_ADD = 'auxline_add'; // data will be the added line
+    static EVENT_AUXLINE_DELETE = 'auxline_del'; // data will be the id of the deleted line
+
+    DEFAULT_PROP_OUT_SHORTLIST=["T","p","v","d","e","h","s","x","cp","cv","gam"];
+    DEFAULT_PROP_IN_SHORTLIST=["T","p","v","d","e","h","s","x"];
+    INIT_PT_ID = 1;
+    INIT_AUX_ID = 1;
+
+    constructor(substance) {
+        super();
+
+        // Init this.points and this.auxlines
+        this.substance = substance;
+        this.init_auxlines();
+        this.init_points();
+    }
 
     /**
-     * Get all valid substance data
-     * @returns valid_substances - dict of valid substances, keys are the
-     *                              substance id, values are a dict with info
-     *                              from PMGI
+     * Clear all auxiliary lines stored and get ready to start over
      */
-    get_valid_substances(){
-        return this.valid_substances;
+    init_auxlines() {
+        this.aux_id = this.INIT_AUX_ID;
+        this.aux_lines = {}
+        this.aux_lines['global'] = []
+
+        this.notify(this, DataModel.EVENT_INIT_AUXLINE, null);
+    }
+
+    /**
+     * Clear all points stored and get ready to start over.
+     */
+    init_points(){
+        this.points = {};
+        this.point_id = this.INIT_PT_ID;
+
+        let keys = this.get_output_properties();
+        keys.push('ptid');
+        keys.forEach((key) =>{
+            this.points[key] = [];
+        });
+
+        // Keep the global aux lines (i.e. assume substance constant)
+        let gl = this.aux_lines['global'];
+        this.aux_lines = {};
+        this.aux_lines['global'] = gl;
+
+        this.notify(this, DataModel.EVENT_INIT_POINTS, null);
     }
 
     /**
@@ -230,22 +200,13 @@ class DataModel extends Subject{
      * @returns {*} array of properties represented by strings
      */
     get_output_properties(){
-        if (this.valid_substances != null && this.substance != null) {
-            if (this.substance.startsWith('ig')){
-                let props = [...this.DEFAULT_PROP_OUT_SHORTLIST];
-                props.splice(props.indexOf('x'), 1);
-                return props
-            } else {
-                return [...this.DEFAULT_PROP_OUT_SHORTLIST];
-            }
+        if (this.substance.startsWith('ig')){
+            let props = [...this.DEFAULT_PROP_OUT_SHORTLIST];
+            props.splice(props.indexOf('x'), 1);
+            return props
         } else {
-            return [];
+            return [...this.DEFAULT_PROP_OUT_SHORTLIST];
         }
-//        if (this.valid_substances != null && this.substance != null) {
-//            return [...this.valid_substances[this.substance]['props']]
-//        } else {
-//            return [];
-//        }
     }
 
     /**
@@ -253,22 +214,13 @@ class DataModel extends Subject{
      * @returns {*} array of properties represented by strings
      */
     get_input_properties(){
-        if (this.valid_substances != null && this.substance != null) {
-            if (this.substance.startsWith('ig')){
-                let props = [...this.DEFAULT_PROP_IN_SHORTLIST]
-                props.splice(props.indexOf('x'), 1);
-                return props
-            } else {
-                return this.DEFAULT_PROP_IN_SHORTLIST;
-            }
+        if (this.substance.startsWith('ig')){
+            let props = [...this.DEFAULT_PROP_IN_SHORTLIST]
+            props.splice(props.indexOf('x'), 1);
+            return props
         } else {
-            return [];
+            return this.DEFAULT_PROP_IN_SHORTLIST;
         }
-//        if (this.valid_substances != null && this.substance != null) {
-//            return this.valid_substances[this.substance]['inputs'];
-//        } else {
-//            return [];
-//        }
     }
 
     /**
@@ -380,131 +332,80 @@ class DataModel extends Subject{
             this.notify(this, DataModel.EVENT_AUXLINE_DELETE, id);
         }
     }
+
+    /**
+     * Listen to Unit events
+     * @param source
+     * @param event
+     * @param data
+     */
+    update(source, event, data){
+        if (event === UnitModel.EVENT_UNIT){
+            this.init_auxlines();
+            this.init_points();
+            calc_auxline() // TODO fix this
+        }
+    }
+
 }
 
 // *********************************************
 // * VIEWS
 // *********************************************
 
-/**
- * Class to handle the substance selector. Data stored in PointModel
- */
-class SubstanceFormView{
-
-    constructor(formHTMLid, show_all=false) {
-        this.select_name = "select";
-
-        this.show_all = show_all;
-        this.target = $("#"+formHTMLid);
-        let select = $('<select/>').attr({id: this.select_name});
-        this.target.append(select);
-        this.select = $('#'+this.select_name, this.target);
-    }
-
-    update(source, event, data){
-        if (event === DataModel.EVENT_SUBSTANCE){
-            this.set_value(data);  // Set the current value to the model's state
-        }
-    }
-
-    /**
-     * Set the value the selector should take
-     * @param substance - A substance id as a string
-     */
-    set_value(substance){
-        this.select.val(substance);
-    }
-
-    /**
-     * Create the substance selector
-     * @param substances - All possible substances, expected as dictionary with
-     *                      keys of the substance id that will appear in the list.
-     * @param current_value - The id of the value you want the selector to have
-     * @param shortlist - A shortlist array of substance_ids to display in the list
-     */
-    init(substances, current_value=null, shortlist=null){
-
-        let subsel = this.select;
-        // Loop over the substances, create option group for each category
-        Object.keys(substances).forEach(subst => {
-            if (this.show_all || shortlist == null || shortlist.includes(subst)) {
-                subsel.append($("<option>").val(subst).text(subst));
-            }
-        });
-
-        // The event handler for changes, which provides a confirmation.
-        subsel.on("change", ()=>{
-            let success = confirm('Changing the substance will reset all data. Are you sure?');
-            if(success){
-                // Call the set_substance method of the controller.
-                set_substance(subsel.val());
-            } else {
-                // undo
-                this.set_value(get_substance());
-                return false;
-            }
-        });
-
-        if (current_value !== null) {
-            this.set_value(current_value);
-        }
-    }
-}
 
 /**
  * A class for controlling the form that allows the user to specify units.
- * Data stored in PointModel
+ * Must link to an HTML file from which the layout will be loaded.
+ * HTML File should contain:
+ * - A form where the all the selects will be added as <li's>(with ID: unit_form)
+ * - Buttons for: apply, revert, default, cancel (with IDs: unit_apply, unit_revert, unit_default, unit_cancel)
  */
 class UnitFormView{
 
-    constructor(formHTMLid) {
-        this.target = $("#"+formHTMLid);
-        this.button_hide_name = "unit_hide";
-        this.unit_list_div_name = "hideablelist";
-        this.unit_form_name = "unitform";
+    constructor(htmlTargetDiv, html, valid_units, currentval, defaultval, set_callback, cancel_callback, postinit=null) {
+        this.change_units_callback = set_callback;
+        this.currentval = currentval;
+        this.defaultval = defaultval;
+        this.cancel_callback = cancel_callback;
+
+        this.unit_form_name = "unit_form";
         this.button_apply_name = "unit_apply";
         this.button_revert_name = "unit_revert";
+        this.button_default_name = "unit_default";
+        this.button_cancel_name = "unit_cancel";
 
-        // Create the hide button and assign its callback.
-        // let hidebutton = $('<input/>').attr({type: 'button', id: this.button_hide_name, value: "Units"});
-        let hidebutton = $("<button/>").attr({id: this.button_hide_name});
-        hidebutton.append($("<i class=\"fas fa-weight-hanging\"></i>"));
-        hidebutton.append("Units");
-        hidebutton.addClass("btn");  // Add css class
+        // Select the target div and load the html
+        this.target = $("#"+htmlTargetDiv);
+        this.target.load(html, ()=>{
 
-        this.target.append(hidebutton);
-        this.button_hide = $('#'+this.button_hide_name, this.target);
-        this.hide_onclick = this.hide_onclick.bind(this);
-        this.button_hide.on("click", this.hide_onclick);
+            this.unit_form = $('#'+this.unit_form_name, this.target);
 
+            // Attach the apply, revert and cancel buttons
+            this.button_apply = $('#'+this.button_apply_name, this.target);
+            this.apply_onclick = this.apply_onclick.bind(this);
+            this.button_apply.on("click", this.apply_onclick);
 
-        // Create a <ul> to hold the checklist, and the checklist
-        let unitlist = $('<ul/>').attr({id: this.unit_list_div_name, style: "display: none"});
-        this.target.append(unitlist);
-        this.unit_list_div = $('#'+this.unit_list_div_name, this.target);
-        let unitform = $('<form/>').attr({id: this.unit_form_name});
-        this.unit_list_div.append(unitform);
-        this.unit_form = $('#'+this.unit_form_name, this.target);
+            this.button_revert = $('#'+this.button_revert_name, this.target);
+            this.revert_onclick = this.revert_onclick.bind(this);
+            this.button_revert.on("click", this.revert_onclick);
 
-        // Create the apply and revert buttons
-        let applybutton = $('<input/>').attr({type: 'button', id: this.button_apply_name, value: "Apply", style: "display: none"});
-        this.unit_list_div.append(applybutton);
-        this.button_apply = $('#'+this.button_apply_name, this.target);
-        this.apply_onclick = this.apply_onclick.bind(this);
-        this.button_apply.on("click", this.apply_onclick);
+            this.button_default = $('#'+this.button_default_name, this.target);
+            this.default_onclick = this.default_onclick.bind(this);
+            this.button_default.on("click", this.default_onclick);
 
-        let revertbutton = $('<input/>').attr({type: 'button', id: this.button_revert_name, value: "Revert", style: "display: none"});
-        this.unit_list_div.append(revertbutton);
-        this.button_revert = $('#'+this.button_revert_name, this.target);
-        this.revert_onclick = this.revert_onclick.bind(this);
-        this.button_revert.on("click", this.revert_onclick);
-    }
+            this.button_cancel = $('#'+this.button_cancel_name, this.target);
+            this.cancel_onclick = this.cancel_onclick.bind(this);
+            this.button_cancel.on("click", this.cancel_onclick);
 
+            this.get_values = this.get_values.bind(this);
 
-    update(source, event, data){
-        if (event === DataModel.EVENT_UNIT){
-            this.set_values(data);
-        }
+            this.init(valid_units, this.currentval);
+
+            if (postinit !== null){
+                postinit();
+            }
+        });
     }
 
     /**
@@ -532,10 +433,6 @@ class UnitFormView{
                 $select.append($("<option>").val(unit_opt).text(unit_opt));
             });
 
-            $select.on("change", ()=>{
-                this.button_apply.show();
-                this.button_revert.show();
-            });
             // Add the objects to the form
             this.unit_form.append($li.append($label).append($select));
         });
@@ -573,9 +470,7 @@ class UnitFormView{
         let success = confirm('Changing the units will reset all data. Are you sure?');
         if(success){
             // Pass the units to the controller
-            this.button_apply.hide();
-            this.button_revert.hide();
-            set_units(this.get_values())
+            this.change_units_callback(this.get_values())
         } else {
             // do nothing and let the user figure it out
             return false;
@@ -587,28 +482,41 @@ class UnitFormView{
      */
     revert_onclick(){
         // revert back to what was set previously
-        this.set_values(get_units());
-        this.button_apply.hide();
-        this.button_revert.hide();
+        this.set_values(this.currentval);
     }
 
     /**
-     * User clicks the show/hide button
+     * User clicks the default button
      */
-    hide_onclick(){
-        this.unit_list_div.toggle();
+    default_onclick(){
+        this.set_values(this.defaultval);
     }
+
+    /**
+     * User clicks the cancel button
+     * @returns {boolean}
+     */
+    cancel_onclick(){
+        this.revert_onclick();
+        this.cancel_callback()
+    }
+
+
 }
+
 
 /**
  * A class for managing the form that consists of property data entry
  */
 class PropEntryView{
-    constructor(formHTMLid) {
+    constructor(formHTMLid, input_properties, prop_strings, compute_callback) {
         this.target = $("#"+formHTMLid);
         this.prop_table_name = "propinput";
         this.prop_form_name = "propform";
         this.post_button_name = "post_props";
+
+        this.props = input_properties;
+        this.compute_callback = compute_callback;
 
         let propform = $('<form/>').attr({id: this.prop_form_name});
         this.target.append(propform);
@@ -623,26 +531,16 @@ class PropEntryView{
         this.post_button = $("#"+this.post_button_name, this.target);
         this.post_onclick = this.post_onclick.bind(this);
         this.post_button.on("click", this.post_onclick);
+
+
+        this.create_propform(this.props, prop_strings);
+
     }
 
     update(source, event, data){
-        if (event === DataModel.EVENT_SUBSTANCE) {
-            let prop_vals = this.get_values();  // Retain values
-            this.init(get_input_properties(), get_unit_strings(), prop_vals);
-        } else if (event === DataModel.EVENT_UNIT) {
-            this.init(get_input_properties(), get_unit_strings());
+        if (event === UnitModel.EVENT_UNIT) {
+            this.create_propform(this.props, source.get_units_for_prop(this.props));
         }
-    }
-
-    /**
-     * Initialize things
-     * @param input_properties - An array of input property strings
-     * @param unit_strings - A dict of units keyed by prop
-     * @param prop_values - a dict keyed by property and with string values
-     */
-    init(input_properties, unit_strings=null, prop_values=null) {
-        this.create_propform(input_properties, unit_strings);
-        this.set_form_values(prop_values);
     }
 
     /**
@@ -679,21 +577,6 @@ class PropEntryView{
     }
 
     /**
-     * Copy existing values into the boxes
-     * @param props - a dict keyed by property and with string values
-     */
-    set_form_values(props) {
-        if (props != null) {
-            $('input', this.prop_table).each((id, box) => {
-                let boxkey = box.attributes['propvalue'].nodeValue;
-                if (Object.keys(props).includes(boxkey)) {
-                    box.value = props[boxkey];
-                }
-            });
-        }
-    }
-
-    /**
      * Convert the form values to a dict of output data
      * @returns data - a dict keyed by property and string vals
      */
@@ -715,7 +598,7 @@ class PropEntryView{
      * A callback to execute computing a point based on the form data.
      */
     post_onclick(){
-        compute_point(this.get_values(), "POST");
+        this.compute_callback(this.get_values());
     }
 
 }
@@ -760,13 +643,6 @@ class PropChooserView extends Subject{
         this.checkbox_onchange = this.checkbox_onchange.bind(this);
     }
 
-
-    update(source, event, data) {
-        if (event === DataModel.EVENT_SUBSTANCE) {
-            let disp_props = this.get_checkbox_values();
-            this.init(source.get_output_properties(), disp_props);
-        }
-    }
 
     /**
      * Initialize
@@ -846,37 +722,6 @@ class PropChooserView extends Subject{
             }
         });
     }
-
-
-    // ******** Legacy code for disabling boxes to control inputs. Keep?
-    //
-    // function updateinputs() {
-    //     // First, count the number of nonzero entries
-    //     var count;
-    //     var inputs = [document.getElementById("Tinput"), document.getElementById("pinput"), document.getElementById("dinput"), document.getElementById("hinput"), document.getElementById("sinput")];
-    //     var x;
-    //
-    //     count = 0;
-    //     for (x of inputs){
-    //         if (x.value.length){
-    //             count += 1;
-    //         }
-    //     }
-    //
-    //     if(count < 2){
-    //         for (x of inputs){
-    //             x.disabled = false;
-    //         }
-    //     }else{
-    //         for (x of inputs){
-    //             if (x.value.length==0){
-    //                 x.disabled = true;
-    //             }
-    //         }
-    //     }
-    //
-    //     // Then, grey out the entries that are zero (if appropriate)
-    // }
 }
 
 
@@ -895,7 +740,7 @@ class PlotView{
     TRACENAMES = ['User Data', 'Steam Dome', 'Const. p', 'Const. T', 'Const. d', 'Const. h', 'Const. s', 'Const. x']
     TRACECOLORS = ['']
 
-    constructor(divTarget) {
+    constructor(divTarget, datasource, unitstrcallback, pointcallback) {
         // TODO - plot prettiness
         this.dispprops = ['T','s','p','v'];
         this.dispisos = ['T', 'p', 'h'];
@@ -910,6 +755,10 @@ class PlotView{
         this.plot = $("#"+this.plot_div_name, this.target);
 
         this.traces = [];
+
+        this.unitstrcallback = unitstrcallback;
+        this.pointcallback = pointcallback;
+        this.datasource = datasource;
 
         this.init();
     }
@@ -1081,12 +930,12 @@ class PlotView{
 
         this.layout = {
             xaxis: {
-                title: this.x_prop + " (" + get_unit_strings([this.x_prop])+")",
+                title: this.x_prop + " (" + this.unitstrcallback([this.x_prop])+")",
                 type: x_scale,
                 autorange: true
             },
             yaxis: {
-                title: this.y_prop + " (" + get_unit_strings([this.y_prop])+")",
+                title: this.y_prop + " (" + this.unitstrcallback([this.y_prop])+")",
                 type: y_scale,
                 autorange: true
             },
@@ -1129,7 +978,7 @@ class PlotView{
                 let formData = {}
                 formData[myPlotContainer.x_prop] = x
                 formData[myPlotContainer.y_prop] = y
-                compute_point(formData, "POST");
+                myPlotContainer.pointcallback(formData);
             }
         });
     }
@@ -1137,15 +986,18 @@ class PlotView{
     update(source, event, data){
         if (event === DataModel.EVENT_POINT_ADD || event === DataModel.EVENT_POINT_DELETE){
             this.updatePoints(source.get_points());
-        } else if (event === DataModel.EVENT_INIT_POINTS || event === DataModel.EVENT_UNIT) {
+        } else if (event === DataModel.EVENT_INIT_POINTS) {
             this.init();
             this.draw_auxlines(source.get_auxlines());
+        } else if (event === unitModel.EVENT_UNIT) {
+            this.init();
+            this.draw_auxlines(this.datasource.get_auxlines())
         } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
             this.dispprops = data;
-            this.updatePoints(get_points());
+            this.updatePoints(this.datasource.get_points());
         } else if (event === PropChooserView.EVENT_ISOLINE_VISIBILITY){
             this.dispisos = data;
-            this.draw_auxlines(get_auxlines());
+            this.draw_auxlines(this.datasource.get_auxlines());
         } else if (event === DataModel.EVENT_AUXLINE_ADD) {
             this.draw_auxlines(source.get_auxlines());
         }
@@ -1155,8 +1007,8 @@ class PlotView{
     onChangeAxes(){
         this.setAxes(this.xprop_sel.val(), this.yprop_sel.val())
         this.init();
-        this.draw_auxlines(get_auxlines());
-        this.updatePoints(get_points());
+        this.draw_auxlines(this.datasource.get_auxlines());
+        this.updatePoints(this.datasource.get_points());
     }
 
     setAxes(xprop, yprop){
@@ -1285,7 +1137,7 @@ class PlotView{
 class TableView{
     // delete rows? https://stackoverflow.com/questions/64526856/how-to-add-edit-delete-buttons-in-each-row-of-datatable
     // showhide columns https://datatables.net/examples/api/show_hide.html
-    constructor(divTarget) {
+    constructor(divTarget, datasource, unitstrcallback) {
         this.target = $("#"+divTarget);
 
         // create a <table> within the div that we'll operate on
@@ -1294,9 +1146,14 @@ class TableView{
 
         this.proptext_to_id = {};
         this.table = null
+
+        this.datasource = datasource;
+        this.unitstrcallback = unitstrcallback;
     }
 
     init(props){
+        let myDatasource = this.datasource;
+
         this.dispprops = [...props]; // copy of props
         if (!this.dispprops.includes('ptid')){
             this.dispprops.unshift("ptid");// ptid should be in the table but not the prop list
@@ -1311,7 +1168,7 @@ class TableView{
             this.dispprops.forEach((prop) =>{
                 let propstr = prop;
                 if (prop !== 'ptid'){
-                    propstr = propstr + " ("+get_unit_strings([prop])+")";
+                    propstr = propstr + " ("+this.unitstrcallback([prop])+")";
                     this.proptext_to_id[propstr] = prop;
                 }
                 let $th = $('<th>'+propstr+'</th>');
@@ -1336,7 +1193,7 @@ class TableView{
             // Click handler for each row's delete button
             $('tbody', this.tabletarget).on( 'click', 'button', function () {
                 let data = table.row( $(this).parents('tr') ).data();
-                delete_point(data[0]);
+                myDatasource.delete_point(data[0]);
             } );
             this.table = table;
         } else {
@@ -1353,7 +1210,7 @@ class TableView{
         if (event === DataModel.EVENT_POINT_ADD || event === DataModel.EVENT_POINT_DELETE){
             this.updatePoints(source.get_points());
         } else if (event === DataModel.EVENT_INIT_POINTS) {
-            this.init(get_output_properties());
+            this.init(this.datasource.get_output_properties());
         } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
             this.columnVisibility(data);
         }

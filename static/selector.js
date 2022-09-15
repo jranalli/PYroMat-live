@@ -7,62 +7,7 @@ let clsi = 4;       // class
 // Use a global variable for the datatable object so it will be
 // available to all functions.
 var sTable;
-// Hard code the
 
-
-// SEL_INIT
-//      sel_init()
-// The sel_init() function is responsible for executing an AJAX call
-// to the info interface to obtain the list of valid substances.  It
-// registers the sel_data_read() function for callback when the data are
-// ready for writing to the table.
-function sel_init(){
-    let from = get_cookie('from');
-    let message = document.getElementById('message');
-    const rqst = new XMLHttpRequest();
-
-    document.getElementById('selection_id').innerHTML = get_cookie('idstr');
-    if (from.length==0){
-        document.getElementById('selection_cancel').disabled = true;
-    }
-
-    message.innerHTML = 'Waiting for PMGI response...';
-
-    // Request the data from the server
-    rqst.onload = sel_data_ready;
-    rqst.open('GET', '/info');
-    rqst.send();
-}
-
-
-// SEL_SELECT
-//      sel_select(idstr)
-// This function is called by clicking a substance selection link.  It
-// calls set_idstr() to set the idstr cookie before returning to the
-// calling page.
-function sel_select(idstr){
-    let from = get_cookie('from');
-    set_cookie_exp('from','',-1);
-    set_cookie('idstr',idstr);
-    document.getElementById('selection_id').innerHTML = get_cookie('idstr');
-    if (from.length > 0){
-        window.location = from;
-    }
-}
-
-
-function sel_cancel(){
-    let from = get_cookie('from');
-    set_cookie_exp('from','',-1);
-    if (from.length > 0){
-        window.location = from;
-    }
-}
-
-function sel_clear(){
-    set_cookie_exp('idstr', '', -1);
-    document.getElementById('selection_id').innerHTML = get_cookie('idstr');
-}
 
 // SEL_UPDATE_FILTER
 //      sel_update_filter()
@@ -101,6 +46,20 @@ function sel_filter(settings, data, dataIndex){
         (cls_ == '' || cls == cls_);
 }
 
+
+function sel_select(idstr){
+    let ok = confirm("Changing the substance will clear all data. Do you want to proceed?")
+    if (ok){
+        change_substance(idstr)
+    } else {
+        // ignore
+    }
+}
+
+function sel_cancel(){
+    onclick_changesubstance();
+}
+
 // SEL_DATA_READY
 //      sel_data_ready()
 // The SEL_DATA_READY function is the callback function for when the
@@ -109,20 +68,13 @@ function sel_filter(settings, data, dataIndex){
 //
 // SEL_DATA_READY is assigned as a callback to the sTable object in the
 // SEL_INIT function.
-function sel_data_ready(){
-    // Parse the response and break it into its parts
-    let response = JSON.parse(this.responseText);
-    let data = response.data;
+function sel_data_ready(data){
     let substances = data.substances;
-    let message = response.message;
-    let args = response.args;
-    let units = response.units;
     // Initialize the data table
-    sTable = new DataTable('#selector_table', {});
+    if (sTable === undefined) {
+        sTable = new DataTable('#selector_table', {});
+    }
 
-    // Deal with any error messages
-    let mesdiv = document.getElementById('message');
-    mesdiv.innerHTML = message.message;
 
     // Loop over each of the substances
     rowi = 0
