@@ -21,3 +21,8 @@ For example to navigate to `static/index.html` you'd visit:
 ```
 https://127.0.0.1:5000/index/
 ```
+
+
+# pythonanywhere
+mkvirtualenv --python=/usr/bin/python3.8 venv
+workon venv
