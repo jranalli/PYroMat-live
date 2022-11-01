@@ -959,7 +959,7 @@ class PropertyRequest(PMGIRequest):
 
         try:
             self.data = subst.state(**args)
-        except pm.utility.PMParamError:
+        except (pm.utility.PMParamError, pm.utility.PMAnalysisError):
             self.mh.error('Failed to generate parameter set.')
             self.mh.message(repr(sys.exc_info()[1]))
             return True
@@ -1255,7 +1255,6 @@ def render_static(page_name):
     # if not app.debug:
     #     flask.abort(404)
     return app.send_static_file('%s.html' % page_name)
-
 
 if __name__ == '__main__':
     app.run()
