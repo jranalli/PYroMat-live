@@ -109,7 +109,7 @@ function load_units_choice() {
 
 
 function apply_units(units){
-    $('#modal_unitspicker').toggle();
+    unitPickerView.toggle();
     change_units(units)
 }
 
@@ -119,7 +119,15 @@ function onclick_changesubstance(){
 
 
 function onclick_changeunits(){
-    $('#modal_unitspicker').toggle();
+    unitPickerView.toggle();
+}
+
+function onclick_isoline_checks(){
+    isolineChooserView.toggle();
+}
+
+function onclick_tableprop_checks(){
+    propChooserView.toggle();
 }
 
 function change_substance(substance){
