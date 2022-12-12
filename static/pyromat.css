@@ -7,15 +7,10 @@
     --pyro-gray: #f0f0f0;
 }
 
-
-
-
-
 .section {
     margin: 0px 30px 0px 30px;
     text-align:justify;
 }
-
 
 /* Section header font definitions
  *  Use the "title" or "subtitle" class to encase in a boarder
@@ -64,6 +59,7 @@ h2 {
     padding: 10px;
     margin-top: 50px;
     margin-bottom: 50px;
+    font-size: 20px;
 }
 
 .tagline {
@@ -370,4 +366,3 @@ td.tdDR {
 #sec2 {
     width: 800px;
 }
-

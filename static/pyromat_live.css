@@ -20,16 +20,20 @@ button:hover, input[type=button]:hover {
   align-content: center;
   overflow: auto;
 }
+
 .property-controls{
   width: 35%;
-  float:left;
+  height: 525px;
+  float: left;
   border: 3px solid var(--pyro-black, black);
   border-radius: 10px;
   padding-right: 0px;
 }
+
 .property-controls table td{
   padding: 5px 0px 0px 5px;
-  text-align:right;
+  text-align: left;
+  font-size: 20px;
 }
 
 .plot-display{
@@ -45,30 +49,6 @@ button:hover, input[type=button]:hover {
   font-size: 16pt;
 }
 
-/* The Modal (background) */
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-/* Modal Content/Box */
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto; /* 15% from the top and centered */
-  padding: 20px;
-  height: 100%;
-  border: 1px solid #888;
-  width: 80%; /* Could be more or less, depending on screen size */
-}
-
 /* The Close Button */
 .close {
   color: #aaa;
@@ -82,4 +62,146 @@ button:hover, input[type=button]:hover {
   color: black;
   text-decoration: none;
   cursor: pointer;
+}
+
+/* Vertical Menu Attributes JB */
+.verticalnav {
+  height: 100%;
+  width: 150px;
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  background-color: black;
+  overflow-x: hidden;
+}
+
+.verticalnav a {
+  padding: 6px 10px 8px 8px;
+  text-decoration: none;
+  font-size: 18px;
+  text-align: right;
+  color:white;
+  display: block;
+  font-family: Arial, sans-serif;
+}
+
+.verticalnav a:hover {
+  background-color: grey;
+}
+
+.verticalnav b {
+  padding: 6px 10px 8px 8px;
+  text-decoration: none;
+  font-size: 18px;
+  text-align: right;
+  color:white;
+  display: block;
+  font-family: Arial, sans-serif;
+}
+
+div ul {
+  padding: 0;
+  list-style-type: none;
+}
+
+div ul ul a {
+  float: right;
+  font-size: 18px;
+  border-left: 5px solid #ef5423;  
+  border-top: 3px solid rgba(255,255,255,0.1);
+  border-bottom: 3px solid rgba(255,255,255,0.05);
+}
+
+div ul ul{
+  position: static;
+  display: none;
+}
+
+div ul .live-show.show{
+  display: block;
+}
+
+/* Gear Button Attributes JB */
+.gearbutton {
+  background-color: white;
+  border: none;
+  color: black;
+  padding: 8px 8px;
+  font-size: 20px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+/* Window Frame Main Attributes JB*/
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  overflow: auto;
+  background-color: white
+}
+
+/* Window Frame Main Content Attributes JB*/
+.modal-content {
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
+
+/*Current Substance Chosen Gearbutton Window Attributes JB*/
+.window1 {
+  margin: 345px 0px;
+  width: 1000px;
+  height: 1000px;
+  overflow: auto;
+  position: absolute;
+  border: 3px solid black;
+  border-radius: 10px;
+}
+
+/*Property Input Gearbutton Window Attributes JB*/
+.window2 {
+  margin: 425px 240px;
+  height: 320px; 
+  width: 320px;
+  overflow: hidden;
+  position: absolute;
+  background-color: white;
+  border: 3px solid black;
+  border-radius: 10px;
+}
+
+/*Plot Gearbutton Window Attributes JB*/
+.window3 {
+  margin: 425px 630px;
+  padding: 10px;
+  height: 310px; 
+  width: 90px;
+  overflow: hidden;
+  position: absolute;
+  background-color: white;
+  border: 3px solid black;
+  border-radius: 10px;
+}
+
+/*Property Tables Gearbutton Window Attributes JB*/
+.window4 {
+  z-index: 1;
+  left: 0;
+  top: 0;
+  margin: 995px 515px;
+  padding: 10px;
+  height: 325px; 
+  width: 90px;
+  overflow: hidden;
+  position: absolute;
+  background-color: white;
+  border: 3px solid black;
+  border-radius: 10px;
 }
