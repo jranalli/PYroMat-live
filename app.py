@@ -416,8 +416,6 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
         kwargs['p'] = line_p
 
-
-
     else:  # Should never arrive here without error
         raise pm.utility.PMParamError('property invalid')
 
@@ -1066,7 +1064,7 @@ class SaturationRequest(PMGIRequest):
         # an array of temperature values to use
 
         # If there are no arguments, then generate a default set of
-        # values
+        # values to represent the steam dome
         if len(args) == 0:
             Tc, pc = subst.critical()
             Tt, pt = subst.triple()
@@ -1186,14 +1184,13 @@ app = Flask(__name__)
 
 # Sitemap:
 # /substance
-#
 #   Return meta information about a specific substance
 #
 # /state
 #   Return property information at a state or array of states
 #
 # /saturation
-#   Return property information along a saturation line
+#   Return property information at a saturation point, or for the steam dome
 #
 # /isoline
 #   Return property information while holding a single property constant
@@ -1255,6 +1252,7 @@ def render_static(page_name):
     # if not app.debug:
     #     flask.abort(404)
     return app.send_static_file('%s.html' % page_name)
+
 
 if __name__ == '__main__':
     app.run()
