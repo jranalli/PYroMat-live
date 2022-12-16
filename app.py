@@ -156,17 +156,14 @@ unless a numpy array is passed explicitly.
             elif np.isnan(unfriendly):
                 return "nan"
             else:
-                return np.asscalar(unfriendly)
-        if any(np.isinf(unfriendly)):
-            bad = np.isinf(unfriendly)
+                return unfriendly.item()
+        if any(np.isinf(unfriendly)) or any(np.isnan(unfriendly)):
+            bad_inf = np.isinf(unfriendly)
+            bad_nan = np.isnan(unfriendly)
             lst = unfriendly.tolist()
-            for i in np.where(bad)[0]:
+            for i in np.where(bad_inf)[0]:
                 lst[i] = "inf"
-            return lst
-        if any(np.isnan(unfriendly)):
-            bad = np.isnan(unfriendly)
-            lst = unfriendly.tolist()
-            for i in np.where(bad)[0]:
+            for i in np.where(bad_nan)[0]:
                 lst[i] = "nan"
             return lst
         return unfriendly.tolist()
@@ -1007,9 +1004,11 @@ class IsolineRequest(PMGIRequest):
             self.data['data'] = compute_iso_line(subst, n=50, **args)
             if isinstance(self.data['data'], list):
                 for row in self.data['data']:
-                    clean_nan(row)  # TODO Kludge clean_nan not working on list
+                    pass
+                    # clean_nan(row)  # TODO Kludge clean_nan not working on list
             else:
-                clean_nan(self.data['data'])
+                pass
+                # clean_nan(self.data['data'])
         except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
             self.mh.error('Failed to generate isoline.')
             self.mh.message(repr(sys.exc_info()[1]))
