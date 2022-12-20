@@ -78,6 +78,7 @@ function ajax_point(substance, state_props=null, units=null, callback=null, igno
  *    - ...
  *
  * If state_props contained the 'default' flag (e.g. {T:null, default:true}),
+ * or state_props asked for an array (e.g. {T=[300,400]}
  * an array of lines is returned in the data field.
  *  - data is array of lines
  *    - data[0]

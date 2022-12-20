@@ -327,29 +327,44 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
                 individual lines.
     """
 
-    # Perform a default computation
-    if len(kwargs) != 1:
-        if 'default' not in kwargs or len(kwargs) != 2:
-            raise pm.utility.PMParamError("Specify exactly one property "
-                                          "for an isoline")
-
-    # Get an array of lines, ignore the value of prop.
+    # Keep track of whether the users want the defaults
+    default_mode = False
     if 'default' in kwargs:
-        kwargs.pop('default')
-        prop = list(kwargs.keys())[0]  # only value left is prop
+        kwargs.pop('default')  # remove from prop list
+        default_mode = True
+
+    # Test the legality of inputs
+    if len(kwargs) != 1:
+        raise pm.utility.PMParamError("Specify exactly one property "
+                                      "for an isoline")
+
+    # We now definitely have only a single property, so pull its name
+    prop = list(kwargs.keys())[0]
+
+    # If the user wants multiple lines, we'll behave differently
+    multiline = None
+    if default_mode:
+        # In default_mode, we'll get the default lines for the substance
+        multiline = get_default_lines(subst, prop)
+    elif hasattr(kwargs[prop], "__iter__") and np.size(kwargs[prop]) > 1:
+        # The user might have also submitted an array to ask for multiple lines
+        multiline = kwargs[prop]
+
+    # If we're looking for multiples, compute each by recursion
+    if multiline is not None:
         lines = []
-        # Recursively compute the single line
-        for val in get_default_lines(subst, prop):
+        for val in multiline:
             arg = {prop: val}  # Build an argument
             try:
                 lines.append(compute_iso_line(subst, n, scaling, **arg))
             except pm.utility.PMParamError:
+                # This may error if stuff is out of bounds, just skip that line
                 pass
         return lines
 
-    # We have a single property, so compute the line
+    # We were asked for a single line, so begin computations for that line
 
-    # Compute the limit pressures and temperatures
+    # Set P&T limits, including special cases for multiphase
     multiphase = hasattr(subst, 'Ts')
     Tmin, pmin, Tmax, pmax = get_practical_limits(subst)
     if multiphase:
@@ -357,7 +372,7 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
         Tt, pt = subst.triple()
 
     # The props for which we will plot against a T list
-    if any(prop in kwargs for prop in ['p', 'd', 'v', 's', 'x']):
+    if prop in ['p', 'd', 'v', 's', 'x']:
 
         # If quality, we stop at the crit pt
         if 'x' in kwargs:
@@ -382,7 +397,7 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
 
         kwargs['T'] = line_T
 
-    elif any(prop in kwargs for prop in ['h', 'e']):
+    elif prop in ['h', 'e']:
         try:  # Finding the low value can be flaky for some substances
             dmax = subst.d(T=Tmin, p=pmax)
         except pm.utility.PMParamError:
@@ -395,7 +410,7 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
         # line_d = np.linspace(dmin, dmax, n)
         kwargs['d'] = line_d
 
-    elif any(prop in kwargs for prop in ['T', 'h', 'e']):
+    elif prop in ['T', 'h', 'e']:
         # ph & pe are going to be really slow, but what's better?
 
         line_p = np.logspace(np.log10(pmin), np.log10(pmax), n).flatten()
