@@ -1075,7 +1075,8 @@ class SaturationRequest(PMGIRequest):
         if len(args) == 0:
             Tc, pc, dc = subst.critical(density=True)
             Tt, pt = subst.triple()
-            ep = (Tc - Tt) * .001
+            # Use an epsilon, we'll manually add the critical point later
+            ep = (Tc - Tt) * .01
             Ts = np.linspace(Tt + ep, Tc - ep, 31)
         # Test for over-defined states
         elif len(args) > 1:
@@ -1112,7 +1113,8 @@ class SaturationRequest(PMGIRequest):
             self.mh.message(repr(e))
             return True
 
-        if len(args) == 0:  # Append the critical point for steam domes
+        # If the request was for the steam dome, append the critical point
+        if len(args) == 0:
             crit_state = subst.state(p=pc, d=dc)
             for prop in crit_state:
                 self.data['liquid'][prop] = \
@@ -1120,6 +1122,7 @@ class SaturationRequest(PMGIRequest):
                 self.data['vapor'][prop] = \
                     np.append(self.data['vapor'][prop], crit_state[prop])
 
+        # Cleanup
         count = clean_nan(self.data['liquid']) \
                 + clean_nan(self.data['vapor'])
         if count:
