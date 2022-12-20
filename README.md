@@ -1,5 +1,5 @@
 # PYroMat Live
-Development for the hosting of the (PYroMat)[https://github.com/chmarti1/PYroMat] API and live webpages. 
+Development for the hosting of the [PYroMat](https://github.com/chmarti1/PYroMat) API and live webpages. 
 
 
 ## Development Setup
@@ -31,4 +31,4 @@ https://127.0.0.1:5000/index/
 ```
 
 ## Demo hosting
-A demo is currently hosted at (PythonAnywhere)[https://jranalli.pythonanywhere.com/]
+A demo is currently hosted at [PythonAnywhere](https://jranalli.pythonanywhere.com/)
