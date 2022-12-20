@@ -1073,7 +1073,7 @@ class SaturationRequest(PMGIRequest):
         # If there are no arguments, then generate a default set of
         # values to represent the steam dome
         if len(args) == 0:
-            Tc, pc = subst.critical()
+            Tc, pc, dc = subst.critical(density=True)
             Tt, pt = subst.triple()
             ep = (Tc - Tt) * .001
             Ts = np.linspace(Tt + ep, Tc - ep, 31)
@@ -1111,6 +1111,14 @@ class SaturationRequest(PMGIRequest):
                 'Failed to evaluate saturation properties at the state(s) provided.')
             self.mh.message(repr(e))
             return True
+
+        if len(args) == 0:  # Append the critical point for steam domes
+            crit_state = subst.state(p=pc, d=dc)
+            for prop in crit_state:
+                self.data['liquid'][prop] = \
+                    np.append(self.data['liquid'][prop], crit_state[prop])
+                self.data['vapor'][prop] = \
+                    np.append(self.data['vapor'][prop], crit_state[prop])
 
         count = clean_nan(self.data['liquid']) \
                 + clean_nan(self.data['vapor'])
