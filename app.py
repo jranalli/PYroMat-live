@@ -1001,14 +1001,7 @@ class IsolineRequest(PMGIRequest):
             return True
 
         try:
-            self.data['data'] = compute_iso_line(subst, n=50, **args)
-            if isinstance(self.data['data'], list):
-                for row in self.data['data']:
-                    pass
-                    # clean_nan(row)  # TODO Kludge clean_nan not working on list
-            else:
-                pass
-                # clean_nan(self.data['data'])
+            self.data = compute_iso_line(subst, n=50, **args)
         except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
             self.mh.error('Failed to generate isoline.')
             self.mh.message(repr(sys.exc_info()[1]))

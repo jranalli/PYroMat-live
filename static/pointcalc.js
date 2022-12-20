@@ -19,16 +19,18 @@ var plotControls;
 // document.ready()
 $(function(){
 
-    // Check if the infodata has been created. If not, get it from ajax and reload
+    // infodata holds the basic info about PYroMat substances.
+    // Check if the infodata has been created and saved to our localStorage
     infodata = localStorage.getItem("infodata");
-    if (infodata === null){
+    if (infodata === null){  // Data not stored, load it from ajax
         ajax_info((data)=>{
+            // Data ready. Save to localStorage, and copy to variable
             localStorage.setItem("infodata", JSON.stringify(data));
             infodata = data;
             init();
         });
     } else {
-        infodata = JSON.parse(infodata);
+        infodata = JSON.parse(infodata); // parse the data from localStorage
         init();
     }
 });
@@ -150,11 +152,7 @@ function display_units(units){
     $("#unit_string").text(JSON.stringify(units));
 }
 
-function ajax_info(callback){
-    $.get("/info",
-        callback,
-        'json');  // Data type of the response.
-}
+
 
 
 
@@ -175,7 +173,7 @@ function calc_auxline(){
         });
 
         compute_auxline((data)=>{
-            data.data.data.forEach((line)=>{
+            data.data.forEach((line)=>{
                 dataModel.add_auxline('x', line, 'global');
             });
         },{'x': 0, 'default': true});
@@ -186,8 +184,8 @@ function calc_auxline(){
         compute_args = {};
         compute_args[prop_val] = 0;
         compute_args["default"] = true;
-        compute_auxline((data)=>{
-            data.data.data.forEach((line)=>{
+        compute_auxline((response)=>{
+            response.data.forEach((line)=>{
                 dataModel.add_auxline(prop_val, line, 'global');
             });
         },compute_args);
@@ -200,64 +198,34 @@ function calc_auxline(){
  * Async request for getting a state from the backend.
  * @param callback - function handle to execute when complete
  * @param props - Dict with keys of property and numeric values
- * @param mode - GET/POST. Only POST can handle units with the request
  */
-function compute_auxline(callback, props={}, mode="POST"){
-    let requestroute;
+function compute_auxline(callback, props={}){
+    let f;
     if (Object.keys(props).length === 0) {
-        requestroute = "/saturation";
+        f = ajax_saturation;
     } else {
-        requestroute = "/isoline"
+        f = ajax_isoline;
     }
 
-    // Add the substance ID to props always
-    props['id'] = dataModel.get_substance();
-
-    if (mode === "GET"){
-        $.get(requestroute, props, callback,dataType='json');
-    } else if (mode === "POST") {
-        let postData = Object.assign({}, props); // clone it
-        postData.units = unitModel.get_units();  // add the units on
-        $.ajax({
-            url: requestroute,
-            type: "POST",
-            data: JSON.stringify(postData),
-            dataType: "json",
-            contentType: 'application/json; charset=utf-8',
-            success: callback
-        });
-    }
+    f(dataModel.get_substance(),
+        props,
+        unitModel.get_units(),
+        (response) => {
+        callback(response);
+    });
 }
 
 
-
-
 /**
- * Async request for getting a state from the backend.
- * @param props - Dict with keys of property and numeric values
- * @param mode - GET/POST. Only POST can handle units with the request
+ * Wrapper for calls to PYroMat API. Used as a callback by several of the Views
+ * @param state_props - Dict with keys of property and numeric values
  */
-function compute_point(props){
-    let requestroute = "/state";
-
-    // Add the substance ID to props always
-    props['id'] = dataModel.get_substance();
-
-    // Build the data request
-    let postData = Object.assign({}, props); // clone it
-    postData.units = unitModel.get_units();  // add the units on
-    $.ajax({
-        url: requestroute,
-        type: "POST",
-        data: JSON.stringify(postData),
-        dataType: "json",
-        contentType: 'application/json; charset=utf-8',
-        success: (data) =>{
-            if (data.message.error){
-                alert(data.message.message);
-            } else {
-                dataModel.add_point(data.data);
-            }
-        },
-    });
+function compute_point(state_props){
+    ajax_point(
+        dataModel.get_substance(),
+        state_props,
+        unitModel.get_units(),
+        (response) => {
+            dataModel.add_point(response.data);
+        });
 }
