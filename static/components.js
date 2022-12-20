@@ -45,11 +45,9 @@ class Subject {
 }
 
 
-class UnitModel extends Subject{
-    static EVENT_UNIT = 'unit'; // Data will be get_unit()
+class UnitModel{
 
     constructor(valid_units, active_units){
-        super();
         this.valid_units = valid_units;
         this.set_units = this.set_units.bind(this);
         this.get_units = this.get_units.bind(this);
@@ -65,7 +63,6 @@ class UnitModel extends Subject{
      */
     set_units(units){
         this.units = units;
-        this.notify(this, UnitModel.EVENT_UNIT, this.get_units())
     }
 
     /**
@@ -101,10 +98,6 @@ class UnitModel extends Subject{
      */
     get_units_for_prop(props=[]){
         if (this.units === null) { return ""; }
-
-        if (props.length === 0) {
-            props = this.get_output_properties();
-        }
 
         let unitstrs = {}
         props.forEach((prop) => {
@@ -336,21 +329,6 @@ class DataModel extends Subject{
             this.notify(this, DataModel.EVENT_AUXLINE_DELETE, id);
         }
     }
-
-    /**
-     * Listen to Unit events
-     * @param source
-     * @param event
-     * @param data
-     */
-    update(source, event, data){
-        if (event === UnitModel.EVENT_UNIT){
-            this.init_auxlines();
-            this.init_points();
-            calc_auxline() // TODO fix this
-        }
-    }
-
 }
 
 // *********************************************

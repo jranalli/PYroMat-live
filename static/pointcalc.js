@@ -59,7 +59,7 @@ function init(){
         onclick_changeunits);
 
 
-    calc_auxline();
+    calculate_plot_isolines();
 
     propEntryView = new PropEntryView("property_controls",
         dataModel.get_input_properties(),
@@ -158,9 +158,9 @@ function display_units(units){
 
 
 
-function calc_auxline(){
+function calculate_plot_isolines(){
     if (dataModel.get_substance().startsWith('mp')){
-        compute_auxline((data)=>{
+        compute_steamdome((data)=>{
             let sll = data.data['liquid'];
             let svl = data.data['vapor'];
             // concatenate vapor to liquid
@@ -200,15 +200,17 @@ function calc_auxline(){
  * @param props - Dict with keys of property and numeric values
  */
 function compute_auxline(callback, props={}){
-    let f;
-    if (Object.keys(props).length === 0) {
-        f = ajax_saturation;
-    } else {
-        f = ajax_isoline;
-    }
-
-    f(dataModel.get_substance(),
+    ajax_isoline(dataModel.get_substance(),
         props,
+        unitModel.get_units(),
+        (response) => {
+        callback(response);
+    });
+}
+
+function compute_steamdome(callback){
+    ajax_saturation(dataModel.get_substance(),
+        {},
         unitModel.get_units(),
         (response) => {
         callback(response);
