@@ -7,12 +7,15 @@
  * - Buttons for: apply, revert, default, cancel (with IDs: unit_apply, unit_revert, unit_default, unit_cancel)
  */
 class UnitFormView{
-
-    constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, cancel_callback) {
+    basic_set = {'temperature':1, 'pressure':1, 'volume':1, 'matter':1, "energy":1};
+    basic_mode = true;
+    constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, cancel_callback, basic_mode=true) {
         this.change_units_callback = set_callback;
         this.currentval = currentval;
         this.defaultval = defaultval;
         this.cancel_callback = cancel_callback;
+
+        this.basic_mode = basic_mode;
 
         this.unit_form_name = "unit_form";
         this.button_apply_name = "unit_apply";
@@ -64,9 +67,17 @@ class UnitFormView{
      *                          category
      */
     init(valid_units, current_values){
+        // to show all units, we should loop over valid_units
+        // to show just a subset, we should loop over basic_set
+        let looplist = null;
+        if (this.basic_mode){
+            looplist = this.basic_set;
+        } else {
+            looplist = valid_units;
+        }
 
         // Loop over all the configured unit types
-        Object.keys(valid_units).forEach(unit_cat => {
+        Object.keys(looplist).forEach(unit_cat => {
             // The form will be a list of labelled select boxes
             let $li = $("<li>")
             let capital_name = unit_cat.charAt(0).toUpperCase() + unit_cat.slice(1);
