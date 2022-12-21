@@ -195,8 +195,8 @@ div ul .live-show.show{
 /*Property Input Gearbutton Window Attributes JB*/
 .window2 {
   margin: 425px 240px;
-  height: 320px; 
-  width: 320px;
+  height: 175px;
+  width: 300px;
   overflow: hidden;
   position: absolute;
   background-color: white;
@@ -224,7 +224,7 @@ div ul .live-show.show{
   top: 0;
   margin: 995px 515px;
   padding: 10px;
-  height: 400px;
+  height: 415px;
   width: 180px;
   overflow: hidden;
   position: absolute;

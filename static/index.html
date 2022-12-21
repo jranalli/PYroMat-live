@@ -66,8 +66,8 @@
 
     <!-- Current Substance Chosen: JB-->
     <div class="subtitle">
-        <b>Current Substance Chosen: <label id="sub_string"></label></b>
-        <gearbutton class="gearbutton" title="Change substance." onclick="onclick_changesubstance()"><i class="fa fa-cog"></i></gearbutton>
+        <b>Current Substance: <label id="sub_string"></label></b>
+        <gearbutton class="gearbutton" title="Change substance." onclick="onclick_toggle_substancecontrols()"><i class="fa fa-cog"></i></gearbutton>
     </div>
 
     <div id="modal_substancepicker" class="window1">
@@ -78,7 +78,7 @@
         <!-- Property Input JB-->
         <div id="property_controls" class="property-controls">
             <h3 class="sec-title">Property Input
-            <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_changeunits()"><i class="fa fa-cog"></i></gearbutton></h3>
+            <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
         </div>
         <div id="modal_unitspicker" class="window2">
         </div>
@@ -86,7 +86,7 @@
         <!-- Plot JB-->
         <div id="plot_display" class="plot-display">
             <h3 class="sec-title">Plot
-                <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_showplotcontrols()"><i class="fa fa-cog"></i></gearbutton>
+                <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
             </h3>
         </div>
 
@@ -96,7 +96,7 @@
 
     <!-- Property Tables JB-->
     <h3 class="subtitle">Property Tables
-        <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_tableprop_checks()"><i class="fa fa-cog"></i></gearbutton>
+        <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_toggle_tablecontrols()"><i class="fa fa-cog"></i></gearbutton>
     </h3>
 
     <div id="property_selection_outer" class="window4">
