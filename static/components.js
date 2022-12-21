@@ -465,6 +465,17 @@ class PlotControls extends Subject{
  * A class for managing the form that consists of property data entry
  */
 class PropEntryView{
+    prop_names = {
+        'T': 'Temperature',
+        'p': 'Pressure',
+        'v': 'Specific Volume',
+        'd': 'Density',
+        'e': 'Specific Internal Energy',
+        'h': 'Specific Enthalpy',
+        's': 'Specific Entropy',
+        'x': 'Quality'
+    }
+
     constructor(formHTMLid, input_properties, prop_strings, compute_callback) {
         this.target = $("#"+formHTMLid);
         this.prop_table_name = "propinput";
@@ -517,7 +528,7 @@ class PropEntryView{
                 if (units != null) {
                     prop = prop + " (" + units[prop] + ")";
                 }
-                head = head + "<th>" + prop + "</th>";
+                head = head + "<th><span title='"+this.prop_names[prop]+"'>" + prop + "</span></th>";
             });
             head = head + "</tr></thead>";
 
@@ -536,11 +547,12 @@ class PropEntryView{
             props.forEach((prop) => {
                 let tr = $("<tr>");
                 let lbl = $("<td>");
+                let p = $("<span title='"+this.prop_names[prop]+"'>")
                 let proplbl = prop;
                 if (units != null) {
                     proplbl = proplbl + " (" + units[prop] + "):";
                 }
-                tr.append(lbl.append(proplbl));
+                tr.append(lbl.append(p.append(proplbl)));
                 let td = $("<td>");
                 // Use string formatting to prevent insanity
                 let inputbox = `<input type="text" propvalue="${prop}" id="${prop}_input" name="${prop}_input">`;
