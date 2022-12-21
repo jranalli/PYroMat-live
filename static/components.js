@@ -505,12 +505,6 @@ class PropEntryView{
 
     }
 
-    update(source, event, data){
-        if (event === UnitModel.EVENT_UNIT) {
-            this.create_propform(this.props, source.get_units_for_prop(this.props));
-        }
-    }
-
     /**
      * Build the form. Note that an extra HTML attribute of propvalue will be
      * used to specify the actual property string separate from the name.
