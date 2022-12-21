@@ -459,7 +459,73 @@ class PlotControls extends Subject{
         this.$outer.toggle();
     }
 }
+class TableControls extends Subject{
+    static EVENT_SUBCOMPONENT_CHECKS = "propcheckchange";
+    static EVENT_COLUMN_CHANGE = "columnchange";
 
+    def_colopts = ['T','p','v','d','e','h','s','x'];
+
+    colopts = ['T','p','v','d','e','h','s','x','cp','cv','gam'];
+
+    checks;
+
+    html_init = false;
+    data_init = false;
+
+    constructor(target_sel, html, start_hidden=true, colopts=null) {
+        super();
+
+        if (colopts){
+            this.colopts = colopts;
+        }
+
+        // Select the target div and load the html
+        this.$outer = target_sel;
+        this.$outer.addClass("modal");
+
+        this.$inner = $("<div></div>");
+        this.$inner.addClass("modal-content");
+        this.$outer.append(this.$inner);
+
+        if (!start_hidden){
+            this.toggle();
+        }
+
+        this.$inner.load(html, ()=> {
+            let $checks = $("#checkboxes", this.$inner);
+
+            this.checks = new PropChooserView($checks, TableControls.EVENT_SUBCOMPONENT_CHECKS, this.colopts, start_hidden=false);
+
+            this.checks.addListener(this);
+
+            this.html_init = true;
+            if (this.data_init){
+                this.init(this.temp);
+            }
+        });
+
+    }
+
+    init(col_props){
+        if (this.html_init){
+            this.checks.init(col_props, this.def_colopts);
+            this.temp = null;
+        } else {
+            this.temp = col_props;
+        }
+        this.data_init = true;
+    }
+
+    update(source, event, data){
+        if (event === TableControls.EVENT_SUBCOMPONENT_CHECKS) {
+            this.notify(this, TableControls.EVENT_COLUMN_CHANGE, data);
+        }
+    }
+
+    toggle(){
+        this.$outer.toggle();
+    }
+}
 
 /**
  * A class for managing the form that consists of property data entry
@@ -947,7 +1013,7 @@ class PlotView{
         } else if (event === unitModel.EVENT_UNIT) {
             this.init();
             this.draw_auxlines(this.datasource.get_auxlines())
-        } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
+        } else if (event === TableControls.EVENT_COLUMN_CHANGE) {
             this.dispprops = data;
             this.updatePoints(this.datasource.get_points());
         } else if (event === PlotControls.EVENT_ISOLINE_VISIBILITY){
@@ -1164,7 +1230,7 @@ class TableView{
             this.updatePoints(source.get_points());
         } else if (event === DataModel.EVENT_INIT_POINTS) {
             this.init(this.datasource.get_output_properties());
-        } else if (event === PropChooserView.EVENT_PROPERTY_VISIBILITY) {
+        } else if (event === TableControls.EVENT_COLUMN_CHANGE) {
             this.columnVisibility(data);
         }
     }

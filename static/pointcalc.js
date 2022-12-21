@@ -67,7 +67,8 @@ function init(){
         compute_point);
 
 
-    propChooserView = new PropChooserView($("#property_selection_outer"), PropChooserView.EVENT_PROPERTY_VISIBILITY);
+    //propChooserView = new PropChooserView($("#property_selection_outer"), PropChooserView.EVENT_PROPERTY_VISIBILITY);
+    propChooserView = new TableControls($("#property_selection_outer"), "../static/table_options.html", start_hidden=true);
 
     plotControls = new PlotControls($("#plot_controls"), "../static/plot_options.html", true);
 
@@ -83,7 +84,7 @@ function init(){
     propChooserView.addListener(tableView);
     tableView.init(dataModel.get_output_properties());
 
-    propChooserView.init(dataModel.get_output_properties(), dataModel.DEFAULT_PROP_OUT_SHORTLIST);
+    propChooserView.init(dataModel.get_output_properties());
     plotControls.init(dataModel.get_output_properties());
 
 
