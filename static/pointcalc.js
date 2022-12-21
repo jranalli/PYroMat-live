@@ -146,7 +146,13 @@ function change_units(units){
 }
 
 function display_substance(sub){
-    $("#sub_string").text(sub);
+    let label = "";
+    if (infodata.data.substances[sub].nam[0]) {
+        label = infodata.data.substances[sub].nam[0] + " ("+sub+")";
+    } else {
+        label = sub;
+    }
+    $("#sub_string").text(label);
 }
 
 function display_units(units){
