@@ -145,8 +145,13 @@ class ModalSubstancePicker{
         this.$outer.toggle()
     }
 
+    hide(){
+        this.$outer.hide();
+    }
+
+
     cancel(){
-        this.toggle();
+        this.hide();
     }
 }
 

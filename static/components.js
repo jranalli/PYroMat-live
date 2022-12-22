@@ -458,6 +458,11 @@ class PlotControls extends Subject{
     toggle(){
         this.$outer.toggle();
     }
+
+    hide(){
+        this.$outer.hide();
+    }
+
 }
 class TableControls extends Subject{
     static EVENT_SUBCOMPONENT_CHECKS = "propcheckchange";
@@ -525,6 +530,11 @@ class TableControls extends Subject{
     toggle(){
         this.$outer.toggle();
     }
+
+    hide(){
+        this.$outer.hide();
+    }
+
 }
 
 
@@ -693,6 +703,10 @@ class UnitFormView{
 
     toggle(){
         this.$outer.toggle()
+    }
+
+    hide(){
+        this.$outer.hide();
     }
 
 }

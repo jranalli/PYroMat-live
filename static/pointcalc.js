@@ -111,19 +111,31 @@ function init(){
 
 function onclick_toggle_substancecontrols(){
     substancePickerModal.toggle();
+    unitControlsModal.hide();
+    plotControlsModal.hide();
+    tableControlsModal.hide();
 }
 
 
 function onclick_toggle_unitcontrols(){
     unitControlsModal.toggle();
+    substancePickerModal.hide()
+    plotControlsModal.hide();
+    tableControlsModal.hide();
 }
 
 function onclick_toggle_plotcontrols(){
     plotControlsModal.toggle();
+    substancePickerModal.hide();
+    unitControlsModal.hide();
+    tableControlsModal.hide();
 }
 
 function onclick_toggle_tablecontrols(){
     tableControlsModal.toggle();
+    plotControlsModal.hide();
+    substancePickerModal.hide();
+    unitControlsModal.hide();
 }
 
 function change_substance(substance){
