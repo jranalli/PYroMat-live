@@ -64,18 +64,19 @@ button:hover, input[type=button]:hover {
   cursor: pointer;
 }
 
-/* Vertical Menu Attributes JB */
-.verticalnav {
-  height: 100%;
-  width: 150px;
-  position: fixed;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  background-color: black;
-  overflow-x: hidden;
-}
 
+.verticalnav {
+    list-style-type: none;
+    font-family:Arial,sans-serif;
+    font-size:18px;
+    padding: 10px;
+    margin: 0;
+    width: 100%;
+    position: static;
+    top: 0;left:0;
+    background-color:black;
+    color:white;
+}
 .verticalnav a {
   padding: 6px 10px 8px 8px;
   text-decoration: none;
@@ -100,6 +101,19 @@ button:hover, input[type=button]:hover {
   font-family: Arial, sans-serif;
 }
 
+@media screen and (min-width: 1030px) {
+/* Vertical Menu Attributes JB */
+  .verticalnav {
+    height: 100%;
+    width: 135px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    background-color: black;
+    overflow-x: hidden;
+  }
+}
 .unitselector {
   margin: 0;
   padding: 0;
