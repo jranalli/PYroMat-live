@@ -54,13 +54,24 @@
 </script>
 
 <div id="content">
-    <div class="title">
+    <div class="title" onclick="$('#intro').toggle()">
         <h1>Property Calculator</h1>
     </div>
-    <div class="section">
+    <div class="section" id="intro" style="display: none">
         <p>
-            This page can be used to compute thermodynamic properties.<br>
-            Use the gear icons to toggle settings.
+            A thermodynamic state is the full description of a substance's properties.
+            This tool can be used to calculate thermodyanmic states for any substance available in PYroMat.
+            Computing states follows the state principle which requires that any two properties
+            fully define the state.
+            That means that only two properties can be specified at one time.
+
+        </p>
+        <p>
+            Use the gear icons to toggle appropriate settings for the relevant section of the page.
+            The active substance can be selected in the header.
+            Units can be specified under Property Input.
+            Various isolines and different plot types can be selected in the Plot settings.
+            Table columns can be hidden in the Property Tables section.
         </p>
     </div>
 
