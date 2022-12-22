@@ -389,9 +389,7 @@ class PlotControls extends Subject{
     ysel;
     checks;
 
-    html_init = false;
-    data_init = false;
-    constructor(target_sel, html, start_hidden=true, isoopts=null, xopts=null, yopts=null) {
+    constructor(target_sel, html, isoopts=null, xopts=null, yopts=null) {
         super();
 
         if (isoopts){
@@ -412,16 +410,14 @@ class PlotControls extends Subject{
         this.$inner.addClass("modal-content");
         this.$outer.append(this.$inner);
 
-        if (!start_hidden){
-            this.toggle();
-        }
+        this.hide();
 
         this.$inner.load(html, ()=> {
             let $checks = $("#checkboxes", this.$inner);
             let $xsel = $("#xdropdown", this.$inner);
             let $ysel = $("#ydropdown", this.$inner);
 
-            this.checks = new PropChooserView($checks, PlotControls.EVENT_SUBCOMPONENT_ISOLINE, this.isoopts, start_hidden=false);
+            this.checks = new PropChooserView($checks, PlotControls.EVENT_SUBCOMPONENT_ISOLINE, this.isoopts);
             this.xsel = new ObservableDropdown($xsel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "X Axis: ", this.xopts, this.def_x);
             this.ysel = new ObservableDropdown($ysel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "Y Axis: ", this.yopts, this.def_y);
 
@@ -429,22 +425,13 @@ class PlotControls extends Subject{
             this.ysel.addListener(this);
             this.checks.addListener(this);
 
-            this.html_init = true;
-            if (this.data_init){
-                this.init(this.temp);
-            }
+            this.init(this.isoopts);
         });
 
     }
 
     init(isoline_properties){
-        if (this.html_init){
-            this.checks.init(isoline_properties, this.def_iso);
-            this.temp = null;
-        } else {
-            this.temp = isoline_properties;
-        }
-        this.data_init = true;
+        this.checks.init(isoline_properties, this.def_iso);
     }
 
     update(source, event, data){
@@ -474,10 +461,7 @@ class TableControls extends Subject{
 
     checks;
 
-    html_init = false;
-    data_init = false;
-
-    constructor(target_sel, html, start_hidden=true, colopts=null) {
+    constructor(target_sel, html, colopts=null) {
         super();
 
         if (colopts){
@@ -492,33 +476,22 @@ class TableControls extends Subject{
         this.$inner.addClass("modal-content");
         this.$outer.append(this.$inner);
 
-        if (!start_hidden){
-            this.toggle();
-        }
+        this.hide();
 
         this.$inner.load(html, ()=> {
             let $checks = $("#checkboxes", this.$inner);
 
-            this.checks = new PropChooserView($checks, TableControls.EVENT_SUBCOMPONENT_CHECKS, this.colopts, start_hidden=false);
+            this.checks = new PropChooserView($checks, TableControls.EVENT_SUBCOMPONENT_CHECKS, this.colopts);
 
             this.checks.addListener(this);
 
-            this.html_init = true;
-            if (this.data_init){
-                this.init(this.temp);
-            }
+            this.init(this.colopts);
         });
 
     }
 
     init(col_props){
-        if (this.html_init){
-            this.checks.init(col_props, this.def_colopts);
-            this.temp = null;
-        } else {
-            this.temp = col_props;
-        }
-        this.data_init = true;
+        this.checks.init(col_props, this.def_colopts);
     }
 
     update(source, event, data){
@@ -840,7 +813,7 @@ class PropEntryView{
 class PropChooserView extends Subject{
     static EVENT_PROPERTY_VISIBILITY = 'propvis'; // When the checkboxes change
     static EVENT_ISOLINE_VISIBILITY = 'isolinevis'; // When the checkboxes change
-    constructor(target_selector, event_type, shortlist = null, start_hidden=true) {
+    constructor(target_selector, event_type, shortlist = null) {
         super();
         this.event_type = event_type;
         this.shortlist = shortlist;
@@ -864,10 +837,6 @@ class PropChooserView extends Subject{
 
         // Since these will be used as callbacks, they need to be bound
         this.checkbox_onchange = this.checkbox_onchange.bind(this);
-
-        if (start_hidden){
-            this.toggle();
-        }
     }
 
 
@@ -952,6 +921,10 @@ class PropChooserView extends Subject{
     toggle(){
         this.$outer.toggle();
     }
+
+    hide(){
+        this.$outer.hide();
+    }
 }
 
 
@@ -966,11 +939,11 @@ Number.prototype.between = function(min, max) {
  * A plot of the data
  */
 class PlotView{
-    TRACEORDER = ['user','steamdome','p','T','d', 'h', 's', 'x']
+    TRACEORDER = ['steamdome','p','T','d', 'h', 's', 'x', 'user']
     TRACENAMES = ['User Data', 'Steam Dome', 'Const. p', 'Const. T', 'Const. d', 'Const. h', 'Const. s', 'Const. x']
     TRACECOLORS = ['']
 
-    constructor(divTarget, datasource, unitstrcallback, pointcallback) {
+    constructor(divTarget, datasource, units, pointcallback) {
         // TODO - plot prettiness
         this.dispprops = ['T','s','p','v'];
         this.dispisos = ['T', 'p', 'h'];
@@ -987,7 +960,7 @@ class PlotView{
 
         this.traces = [];
 
-        this.unitstrcallback = unitstrcallback;
+        this.units = units;
         this.pointcallback = pointcallback;
         this.datasource = datasource;
 
@@ -998,18 +971,7 @@ class PlotView{
         this.set_layout();
         // Create the plot trace
         this.traces = [];
-        this.traces.push({
-            x: [],
-            y: [],
-            customdata: [],
-            mode: 'markers',
-            name: "User Points",
-            hovertemplate: "<b> Point prop</b><br>"+
-                this.x_prop+": %{x}<br>" +
-                this.y_prop+": %{y}<br>" +
-                "attr: %{customdata}",
-            type: 'scatter'
-        });
+
         this.traces.push({
             x: [],
             y: [],
@@ -1019,6 +981,7 @@ class PlotView{
             hovertemplate: " ",
             showlegend: false,
             line: {
+                shape: "spline",
                 color: 'rgb(0, 0, 0)',
                 width: 3
             }
@@ -1030,9 +993,10 @@ class PlotView{
             type: 'scatter',
             name: 'isolines p',
             hovertemplate: "<b>Isobar</b><br>"+
-                "p: %{customdata:.5g}",
+                "p: %{customdata:.5g} "+this.units["p"],
             showlegend: false,
             line: {
+                dash: "dot",
                 color: 'rgb(0, 100, 0)',
                 width: 1
             }
@@ -1044,9 +1008,10 @@ class PlotView{
             type: 'scatter',
             name: 'isolines T',
             hovertemplate: "<b>Isotherm</b><br>"+
-                "T: %{customdata:#.4g}",
+                "T: %{customdata:#.4g} "+this.units["T"],
             showlegend: false,
             line: {
+                dash: "dot",
                 color: 'rgb(155, 0, 0)',
                 width: 1
             }
@@ -1058,9 +1023,10 @@ class PlotView{
             type: 'scatter',
             name: 'isolines d',
             hovertemplate: "<b>Iso-d Line</b><br>"+
-                "d: %{customdata:#.4g}",
+                "d: %{customdata:#.4g} "+this.units["d"],
             showlegend: false,
             line: {
+                dash: "dot",
                 color: 'rgb(0, 155, 155)',
                 width: 1
             }
@@ -1072,9 +1038,10 @@ class PlotView{
             type: 'scatter',
             name: 'isolines h',
             hovertemplate: "<b>Iso-h Line</b><br>"+
-                "h: %{customdata:#.4g}",
+                "h: %{customdata:#.4g} "+this.units["h"],
             showlegend: false,
             line: {
+                dash: "dot",
                 color: 'rgb(155, 155, 0)',
                 width: 1
             }
@@ -1086,9 +1053,10 @@ class PlotView{
             type: 'scatter',
             name: 'isolines s',
             hovertemplate: "<b>Iso-s line</b><br>"+
-                "s: %{customdata:#.3g}",
+                "s: %{customdata:#.3g} "+this.units["s"],
             showlegend: false,
             line: {
+                dash: "dash",
                 color: 'rgb(0, 0, 155)',
                 width: 1
             }
@@ -1103,9 +1071,26 @@ class PlotView{
                 "x: %{customdata:#.2g}",
             showlegend: false,
             line: {
+                dash: "dot",
                 color: 'rgb(155, 0, 155)',
                 width: 1
             }
+        });
+        this.traces.push({ // hovertemplate created in updatePoints
+            x: [],
+            y: [],
+            customdata: [],
+            mode: 'markers',
+            name: "User Points",
+            type: 'scatter',
+            marker: {
+                color: 'rgb(175, 0, 0)',
+                size: 10,
+                line: {
+                    color: 'rgb(175, 0, 0)',
+                    width: 0
+                }
+            },
         });
         // Create the plot object
         Plotly.newPlot(this.plot.get()[0], this.traces, this.layout, {responsive: true});
@@ -1131,12 +1116,12 @@ class PlotView{
 
         this.layout = {
             xaxis: {
-                title: this.x_prop + " (" + this.unitstrcallback([this.x_prop])+")",
+                title: this.x_prop + " (" + this.units[this.x_prop]+")",
                 type: x_scale,
                 autorange: true
             },
             yaxis: {
-                title: this.y_prop + " (" + this.unitstrcallback([this.y_prop])+")",
+                title: this.y_prop + " (" + this.units[this.y_prop]+")",
                 type: y_scale,
                 autorange: true
             },
@@ -1227,7 +1212,7 @@ class PlotView{
 
             // Establish the index in the order of the traces
             let ind = this.TRACEORDER.indexOf(prop);
-            if (ind > 0) { // ind 0 is the user points
+            if (ind >= 0) { // ind 0 is the user points
 
                 // Make a placeholder for the updates
                 let iso_update = null;
@@ -1311,7 +1296,11 @@ class PlotView{
             // Build the strings that represent the tooltip
             let customrows = "";
             for (let i = 0; i < keylist.length; i++) {
-                customrows = customrows + keylist[i] + ": %{customdata[" + (i + 1) + "]:#.5g}<br>";
+                let unitstr = "";
+                if (keylist[i] !== "x") {
+                    unitstr = this.units[keylist[i]];
+                }
+                customrows = customrows + keylist[i] + ": %{customdata[" + (i + 1) + "]:#.5g} "+unitstr+"<br>";
             }
 
             // Fully replace User Point trace, including the custom data
@@ -1320,8 +1309,8 @@ class PlotView{
                 y: [points[this.y_prop]],
                 customdata: [customdataset],
                 hovertemplate: "<b>Point %{customdata[0]}</b><br>" +
-                    this.x_prop + ": %{x}<br>" +
-                    this.y_prop + ": %{y}<br>" +
+                    this.x_prop + ": %{x} "+this.units[this.x_prop]+"<br>" +
+                    this.y_prop + ": %{y} "+this.units[this.y_prop]+"<br>" +
                     customrows,
             }
 
@@ -1337,7 +1326,7 @@ class PlotView{
 class TableView{
     // delete rows? https://stackoverflow.com/questions/64526856/how-to-add-edit-delete-buttons-in-each-row-of-datatable
     // showhide columns https://datatables.net/examples/api/show_hide.html
-    constructor(divTarget, datasource, unitstrcallback) {
+    constructor(divTarget, datasource, props, units) {
         this.target = $("#"+divTarget);
 
         // create a <table> within the div that we'll operate on
@@ -1348,7 +1337,9 @@ class TableView{
         this.table = null
 
         this.datasource = datasource;
-        this.unitstrcallback = unitstrcallback;
+        this.units = units;
+
+        this.init(props);
     }
 
     init(props){
@@ -1368,7 +1359,7 @@ class TableView{
             this.dispprops.forEach((prop) =>{
                 let propstr = prop;
                 if (prop !== 'ptid'){
-                    propstr = propstr + " ("+this.unitstrcallback([prop])+")";
+                    propstr = propstr + " ("+this.units[prop]+")";
                     this.proptext_to_id[propstr] = prop;
                 }
                 let $th = $('<th>'+propstr+'</th>');

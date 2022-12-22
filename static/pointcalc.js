@@ -61,6 +61,7 @@ function init(){
     dataModel = new DataModel(subid);
     unitModel = new UnitModel(infodata.data.legalunits, units);
 
+    // Create the modal controls, and initialize them if needed.
     substancePickerModal = new ModalSubstancePicker('modal_substancepicker',
         '../static/modal_substance.html',
         infodata.data.substances,
@@ -73,45 +74,37 @@ function init(){
         infodata.units,
         change_units);
 
-
-    calculate_plot_isolines();
-
     propEntryForm = new PropEntryView("property_controls",
         dataModel.get_input_properties(),
         unitModel.get_units_for_prop(dataModel.get_input_properties()),
         compute_point);
 
-
-
     tableControlsModal = new TableControls($("#property_selection_outer"),
         "../static/table_options.html",
-        true);
-    tableControlsModal.init(dataModel.get_output_properties());
+        dataModel.get_output_properties());
 
     plotControlsModal = new PlotControls($("#plot_controls"),
-        "../static/plot_options.html",
-        true);
-    plotControlsModal.init(dataModel.get_output_properties());
+        "../static/plot_options.html");
 
+    // Compute the isoline data for the plot
+    calculate_plot_isolines();
+
+    // Create plot, have it listen to the other objects
     plotView = new PlotView("plot_display",
         dataModel,
-        unitModel.get_units_for_prop,
+        unitModel.get_units_for_prop(dataModel.get_output_properties()),
         compute_point);
     dataModel.addListener(plotView);
     tableControlsModal.addListener(plotView);
     plotControlsModal.addListener(plotView);
-    plotView.init();
 
-    // Assign views to listen to the main model
+    // Create table, have it listen to the other objects
     tableView = new TableView('property_table',
         dataModel,
-        unitModel.get_units_for_prop);
+        dataModel.get_output_properties(),
+        unitModel.get_units_for_prop(dataModel.get_output_properties()));
     dataModel.addListener(tableView);
     tableControlsModal.addListener(tableView);
-    tableView.init(dataModel.get_output_properties());
-
-
-
 }
 
 
