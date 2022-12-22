@@ -1,18 +1,24 @@
-<div id='selection'>
-        <button id='selection_cancel'>Cancel</button>
+<div id="info" style="float: left; width: 300px">
+    <h3 style="margin-bottom: 0">Choose Substance</h3>
+    <p style="margin:0">
+        Click on the substance ID link to change the active substance.
+        Use the controls to the right to filter the table.
+    </p>
+    <button id='selection_cancel'>Cancel</button>
 </div>
 
-<div id='filter_div'>
+
+<div id='filter_div' style="float: right">
     <h3>Filters</h3>
     <table id='filter_tab'>
         <tr>
-            <td align='right'>MW:</td>
+            <td stlye='text-align: right'>MW:</td>
             <td>
-                <input type='number' id='filt_mw_min' min=0. value='' size=10>(min)
+                <input type='number' id='filt_mw_min' min=0. value='' size=10>(min)<br>
                 <input type='number' id='filt_mw_max' min=0. value='' size=10>(max)</td>
         </tr>
         <tr>
-            <td align='right'><label for='collection'>Collection:</label></td>
+            <td stlye='text-align: right'><label for='collection'>Collection:</label></td>
             <td>
                 <select id='filt_col' name='filt_col'>
                     <option value=''></option>
@@ -22,7 +28,7 @@
             </td>
         </tr>
         <tr>
-            <td align='right'><label for='class'>Class:</label></td>
+            <td stlye='text-align: right'><label for='class'>Class:</label></td>
             <td>
                 <select id='filt_cls' name='filt_cls'>
                     <option value=''></option>
@@ -34,10 +40,9 @@
             </td>
         </tr>
     </table>
-    <input type='button' id='filt_update' value='Update'>
 </div>
 
-<div class=selector_class>
+<div class=selector_class style="clear: left">
     <table id='selector_table' class=display>
         <thead>
             <tr>

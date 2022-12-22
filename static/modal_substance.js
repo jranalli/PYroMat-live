@@ -15,7 +15,9 @@ class ModalSubstancePicker{
     static clsi = 4;       // class
     sTable;
 
-    constructor(outer_div_id, html, initialdata) {
+    callback = null;
+
+    constructor(outer_div_id, html, initialdata, callback) {
         this.$outer = $('#'+outer_div_id);
         this.$outer.addClass("modal");
 
@@ -23,18 +25,22 @@ class ModalSubstancePicker{
         this.$inner.addClass("modal-content");
         this.$outer.append(this.$inner);
 
+        this.callback = callback;
+
         this.$inner.load(html, ()=>{
 
             this.button_updatefilt_name = "filt_update";
             this.button_cancel_name = "selection_cancel";
 
-            this.button_updatefilt = $('#'+this.button_updatefilt_name, this.$outer);
-            this.update_filter = this.update_filter.bind(this);
-            this.button_updatefilt.on("click", this.update_filter);
-
             this.button_cancel = $('#'+this.button_cancel_name, this.$outer);
             this.cancel = this.cancel.bind(this);
             this.button_cancel.on("click", this.cancel);
+
+            this.update_filter = this.update_filter.bind(this);
+            $("#filt_col").on("change", this.update_filter)
+            $("#filt_cls").on("change", this.update_filter)
+            $("#filt_mw_min").on("change", this.update_filter)
+            $("#filt_mw_max").on("change", this.update_filter)
 
             this.data_ready(initialdata);
         });
@@ -84,7 +90,9 @@ class ModalSubstancePicker{
     select(idstr){
         let ok = confirm("Changing the substance will clear all data. Do you want to proceed?")
         if (ok){
-            change_substance(idstr)
+            if (this.callback) {
+                this.callback(idstr);
+            }
         } else {
             // ignore
         }
@@ -123,7 +131,7 @@ class ModalSubstancePicker{
 
             // Add the row
             // ID, name, MW, collection, class
-            this.sTable.row.add([idtag[0].outerHTML, name, subst.mw, subst.col, subst.cls]);
+            this.sTable.row.add([idtag[0].outerHTML, name, subst.mw.toLocaleString("en-US", {maximumFractionDigits: 2}), subst.col, subst.cls]);
 
             rowi += 1;
         }

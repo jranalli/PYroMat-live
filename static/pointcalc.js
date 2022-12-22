@@ -63,7 +63,8 @@ function init(){
 
     substancePickerModal = new ModalSubstancePicker('modal_substancepicker',
         '../static/modal_substance.html',
-        infodata.data.substances);
+        infodata.data.substances,
+        change_substance);
 
     unitControlsModal = new UnitFormView($('#modal_unitspicker'),
         "../static/unitspicker.html",
