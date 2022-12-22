@@ -548,17 +548,15 @@ class TableControls extends Subject{
 class UnitFormView{
     basic_set = {'temperature':1, 'pressure':1, 'volume':1, 'matter':1, "energy":1};
     basic_mode = true;
-    constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, cancel_callback, basic_mode=true) {
+    constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, basic_mode=true) {
         this.change_units_callback = set_callback;
         this.currentval = currentval;
         this.defaultval = defaultval;
-        this.cancel_callback = cancel_callback;
 
         this.basic_mode = basic_mode;
 
         this.unit_form_name = "unit_form";
         this.button_apply_name = "unit_apply";
-        this.button_revert_name = "unit_revert";
         this.button_default_name = "unit_default";
         this.button_cancel_name = "unit_cancel";
 
@@ -680,7 +678,7 @@ class UnitFormView{
     /**
      * User clicks the revert button
      */
-    revert_onclick(){
+    revert_vals(){
         // revert back to what was set previously
         this.set_values(this.currentval);
     }
@@ -697,8 +695,8 @@ class UnitFormView{
      * @returns {boolean}
      */
     cancel_onclick(){
-        this.revert_onclick();
-        this.cancel_callback()
+        this.revert_vals();
+        this.hide();
     }
 
     toggle(){

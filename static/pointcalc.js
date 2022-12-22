@@ -71,8 +71,7 @@ function init(){
         infodata.data.legalunits,
         units,
         infodata.units,
-        change_units,
-        onclick_toggle_unitcontrols);
+        change_units);
 
 
     calculate_plot_isolines();
@@ -84,24 +83,33 @@ function init(){
 
 
 
-    tableControlsModal = new TableControls($("#property_selection_outer"), "../static/table_options.html", start_hidden=true);
+    tableControlsModal = new TableControls($("#property_selection_outer"),
+        "../static/table_options.html",
+        true);
+    tableControlsModal.init(dataModel.get_output_properties());
 
-    plotControlsModal = new PlotControls($("#plot_controls"), "../static/plot_options.html", true);
+    plotControlsModal = new PlotControls($("#plot_controls"),
+        "../static/plot_options.html",
+        true);
+    plotControlsModal.init(dataModel.get_output_properties());
 
-    plotView = new PlotView("plot_display", dataModel, unitModel.get_units_for_prop, compute_point);
+    plotView = new PlotView("plot_display",
+        dataModel,
+        unitModel.get_units_for_prop,
+        compute_point);
     dataModel.addListener(plotView);
     tableControlsModal.addListener(plotView);
     plotControlsModal.addListener(plotView);
     plotView.init();
 
     // Assign views to listen to the main model
-    tableView = new TableView('property_table', dataModel, unitModel.get_units_for_prop);
+    tableView = new TableView('property_table',
+        dataModel,
+        unitModel.get_units_for_prop);
     dataModel.addListener(tableView);
     tableControlsModal.addListener(tableView);
     tableView.init(dataModel.get_output_properties());
 
-    tableControlsModal.init(dataModel.get_output_properties());
-    plotControlsModal.init(dataModel.get_output_properties());
 
 
 }
