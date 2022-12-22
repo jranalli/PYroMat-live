@@ -673,7 +673,7 @@ class PropChooserView extends Subject{
 
 
         // Create a <ul> to hold the checklist
-        let checklist = $('<ul/>').attr({id: this.prop_checks_name});
+        let checklist = $('<form>').attr({id: this.prop_checks_name});
 
         this.$inner.append(checklist);
 
@@ -711,8 +711,7 @@ class PropChooserView extends Subject{
         valid_properties.forEach(prop => {
             if (this.shortlist == null || this.shortlist.includes(prop)) {
                 // The form will be a list of labelled check boxes
-                let $li = $("<li>")
-                let $label = $('<label>' + prop + '</label>', {});
+                let $label = $('<label for="'+prop+'_box">' + prop + '</label>', {});
 
                 // Add this checkbox
                 let $checkbox = $('<input>', {
@@ -726,7 +725,7 @@ class PropChooserView extends Subject{
                 $checkbox.on("click", this.checkbox_onchange);
 
                 // Add the objects to the form
-                this.prop_checks.append($li.append($label).append($checkbox));
+                this.prop_checks.append($checkbox).append($label).append($("<br>"));
             }
         });
     }
