@@ -518,7 +518,7 @@ class TableControls extends Subject{
  * - A form where the all the selects will be added as <li's>(with ID: unit_form)
  * - Buttons for: apply, revert, default, cancel (with IDs: unit_apply, unit_revert, unit_default, unit_cancel)
  */
-class UnitFormView{
+class UnitPicker {
     basic_set = {'temperature':1, 'pressure':1, 'volume':1, 'matter':1, "energy":1};
     basic_mode = true;
     constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, basic_mode=true) {

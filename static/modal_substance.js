@@ -3,7 +3,7 @@
 // Messing with the layout of the DataTable
 //https://stackoverflow.com/questions/38602873/datatables-button-and-search-box-position
 
-class ModalSubstancePicker{
+class SubstancePicker {
 
     // Hard code the column indexes
     static idi = 0;        // ID string
@@ -68,9 +68,9 @@ class ModalSubstancePicker{
     // filter.  The SEL_FILTER is applied as a callback to the DataTables in
     // the SEL_DATA_READY function.
     filter(settings, data, dataIndex){
-        let mw = data[ModalSubstancePicker.mwi];
-        let col = data[ModalSubstancePicker.coli];
-        let cls = data[ModalSubstancePicker.clsi];
+        let mw = data[SubstancePicker.mwi];
+        let col = data[SubstancePicker.coli];
+        let cls = data[SubstancePicker.clsi];
 
         let mw_min = parseFloat(document.getElementById('filt_mw_min').value);
         let mw_max = parseFloat(document.getElementById('filt_mw_max').value);

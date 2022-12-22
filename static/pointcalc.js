@@ -54,40 +54,44 @@ function init(){
     let subid = load_substance_cookie();
     let units = load_units_cookie();
 
-    // Initialize the substance display text
+    // Change the Substance Display Text
     display_substance(subid);
 
     // Create the models that will hold onto the data
     dataModel = new DataModel(subid);
     unitModel = new UnitModel(infodata.data.legalunits, units);
 
-    // Create the modal controls, and initialize them if needed.
-    substancePickerModal = new ModalSubstancePicker('modal_substancepicker',
+    // Compute the isoline data for the plot
+    calculate_plot_isolines();
+
+    // Substance Gear
+    substancePickerModal = new SubstancePicker('modal_substancepicker',
         '../static/modal_substance.html',
         infodata.data.substances,
         change_substance);
 
-    unitControlsModal = new UnitFormView($('#modal_unitspicker'),
+    // Units Gear
+    unitControlsModal = new UnitPicker($('#modal_unitspicker'),
         "../static/unitspicker.html",
         infodata.data.legalunits,
         units,
         infodata.units,
         change_units);
 
-    propEntryForm = new PropEntryView("property_controls",
-        dataModel.get_input_properties(),
-        unitModel.get_units_for_prop(dataModel.get_input_properties()),
-        compute_point);
-
+    // Table Gear
     tableControlsModal = new TableControls($("#property_selection_outer"),
         "../static/table_options.html",
         dataModel.get_output_properties());
 
+    // Plot Gear
     plotControlsModal = new PlotControls($("#plot_controls"),
         "../static/plot_options.html");
 
-    // Compute the isoline data for the plot
-    calculate_plot_isolines();
+    // Create the Property Input Form
+    propEntryForm = new PropEntryView("property_controls",
+        dataModel.get_input_properties(),
+        unitModel.get_units_for_prop(dataModel.get_input_properties()),
+        compute_point);
 
     // Create plot, have it listen to the other objects
     plotView = new PlotView("plot_display",
@@ -108,8 +112,9 @@ function init(){
 }
 
 
-
-
+// **********************************************************
+// *  Toggle Button functionality
+// **********************************************************
 
 function onclick_toggle_substancecontrols(){
     substancePickerModal.toggle();
@@ -117,7 +122,6 @@ function onclick_toggle_substancecontrols(){
     plotControlsModal.hide();
     tableControlsModal.hide();
 }
-
 
 function onclick_toggle_unitcontrols(){
     unitControlsModal.toggle();
@@ -140,18 +144,36 @@ function onclick_toggle_tablecontrols(){
     unitControlsModal.hide();
 }
 
+// **********************************************************
+// *  Handle user requests to reconfigure page
+// **********************************************************
+
+/**
+ * Call when the user requests a change to the substance.
+ * Reloads page.
+ * @param substance - the substance id string
+ */
 function change_substance(substance){
     set_substance_cookie(substance);
     location.reload();
 }
 
+/**
+ * Call when the user requests a change to the units.
+ * Reloads page.
+ * @param units - the units dictionary keyed by unit type
+ */
 function change_units(units){
     set_units_cookie(units)
     location.reload()
 }
 
+/**
+ * Update the Indicator that shows the currently active substance;
+ * @param sub - the substance id
+ */
 function display_substance(sub){
-    let label = "";
+    let label;
     if (infodata.data.substances[sub].nam[0]) {
         label = infodata.data.substances[sub].nam[0] + " ("+sub+")";
     } else {
@@ -160,6 +182,9 @@ function display_substance(sub){
     $("#sub_string").text(label);
 }
 
+/**
+ * Decides which isolines to compute and passes the request along.
+ */
 function calculate_plot_isolines(){
     if (dataModel.get_substance().startsWith('mp')){
         compute_steamdome();
@@ -168,13 +193,17 @@ function calculate_plot_isolines(){
 
     // Add a few types of lines
     ['p', 'T', 'd', 'h', 's'].forEach((prop_val)=>{
-        compute_args = {};
+        // Have to manually add property due to variable name
+        compute_args = {}
         compute_args[prop_val] = 0;
-        compute_args["default"] = true;
+        compute_args['default'] = true;
         compute_auxline(compute_args);
     });
 }
 
+// **********************************************************
+// *  Wrappers for API calls
+// **********************************************************
 
 /**
  * Wrapper for computing isolines. Automatically adds result as an
