@@ -90,7 +90,6 @@ import sys
 
 __version__ = '0.1'
 
-
 # ### Helper functions
 def toarray(a):
     try:
@@ -1194,6 +1193,10 @@ correctly formatted data that can be returned as a JSON object.
 ############################
 app = Flask(__name__)
 
+PREFIX = ""
+if app.debug:
+    PREFIX = "/api"
+
 
 # Flask will see the route as relative to the apache WSGI alias
 # The intent is that the WSGI root be set to pyromat.org/pmgi, so that
@@ -1225,7 +1228,7 @@ def substance():
 
 
 # The root pmgi accepts property requests.
-@app.route('/state', methods=['POST', 'GET'])
+@app.route(f'{PREFIX}/state', methods=['POST', 'GET'])
 def state():
     pr = PropertyRequest(request)
     pr.process_units()
@@ -1235,7 +1238,7 @@ def state():
 
 
 # The saturation route computes saturation points or the steam dome
-@app.route('/saturation', methods=['POST', 'GET'])
+@app.route(f'{PREFIX}/saturation', methods=['POST', 'GET'])
 def saturation():
     sr = SaturationRequest(request)
     sr.process_units()
@@ -1244,7 +1247,7 @@ def saturation():
 
 
 # The isoline route computes isolines
-@app.route('/isoline', methods=['POST', 'GET'])
+@app.route(f'{PREFIX}/isoline', methods=['POST', 'GET'])
 def isoline():
     # Read in the request data to an args dict
     isr = IsolineRequest(request)
@@ -1254,7 +1257,7 @@ def isoline():
 
 
 # The info pmgi will return the results of queries (e.g. substance search)
-@app.route('/info', methods=['POST', 'GET'])
+@app.route(f'{PREFIX}/info', methods=['POST', 'GET'])
 def info():
     ir = InfoRequest(request)
     ir.process_units()
@@ -1267,8 +1270,8 @@ def info():
 # ##### /static/index.html
 @app.route('/<string:page_name>/')
 def render_static(page_name):
-    # if not app.debug:
-    #     flask.abort(404)
+    if not app.debug:
+        flask.abort(404)
     return app.send_static_file('%s.html' % page_name)
 
 

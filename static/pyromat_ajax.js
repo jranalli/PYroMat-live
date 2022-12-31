@@ -28,7 +28,7 @@
  *
  */
 function ajax_info(callback){
-    $.get("/info",  // route
+    $.get("/api/info",  // route
         callback,  // callback function handle
         'json');  // Data type of the response.
 }
@@ -55,7 +55,7 @@ function ajax_info(callback){
  *  callback.
  */
 function ajax_point(substance, state_props=null, units=null, callback=null, ignore_err=false){
-    let requestroute = "/state";
+    let requestroute = "/api/state";
     let postData = build_postData(substance, state_props, units);
     ajax_route(requestroute, postData, callback, ignore_err)
 }
@@ -99,7 +99,7 @@ function ajax_point(substance, state_props=null, units=null, callback=null, igno
  *  callback.
  */
 function ajax_isoline(substance, state_props=null, units=null, callback=null, ignore_err=false){
-    let requestroute = "/isoline";
+    let requestroute = "/api/isoline";
     let postData = build_postData(substance, state_props, units);
     ajax_route(requestroute, postData, callback, ignore_err)
 }
@@ -134,7 +134,7 @@ function ajax_isoline(substance, state_props=null, units=null, callback=null, ig
  *  callback.
  */
 function ajax_saturation(substance, state_props=null, units=null, callback=null, ignore_err=false){
-    let requestroute = "/saturation";
+    let requestroute = "/api/saturation";
     let postData = build_postData(substance, state_props, units);
     ajax_route(requestroute, postData, callback, ignore_err)
 }
