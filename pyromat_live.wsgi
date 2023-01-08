@@ -2,7 +2,7 @@
 
 import sys
 
-sys.path.insert(0, '/var/www/pyromat_live')
+sys.path.insert(0, '/var/www/cgi-bin')
 
 
 
