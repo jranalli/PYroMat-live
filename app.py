@@ -1191,7 +1191,7 @@ correctly formatted data that can be returned as a JSON object.
 ############################
 # Define the URL interface #
 ############################
-app = Flask(__name__)
+app = Flask(__name__, static_folder="live")
 
 PREFIX = ""
 if app.debug:

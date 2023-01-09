@@ -23,7 +23,7 @@ function init(){
     let subid = load_substance_choice();
 
     substancePicker = new SubstancePicker('modal_substancepicker',
-    '../static/modal_substance.html',
+    'modal_substance.html',
     infodata.data.substances);
     ajax_subst(subid, (data)=>{
         subst_data_ready(data);

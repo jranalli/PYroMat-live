@@ -66,13 +66,13 @@ function init(){
 
     // Substance Gear
     substancePickerModal = new SubstancePicker('modal_substancepicker',
-        '../static/modal_substance.html',
+        'modal_substance.html',
         infodata.data.substances,
         change_substance);
 
     // Units Gear
     unitControlsModal = new UnitPicker($('#modal_unitspicker'),
-        "../static/unitspicker.html",
+        "unitspicker.html",
         infodata.data.legalunits,
         units,
         infodata.units,
@@ -80,12 +80,12 @@ function init(){
 
     // Table Gear
     tableControlsModal = new TableControls($("#property_selection_outer"),
-        "../static/table_options.html",
+        "table_options.html",
         dataModel.get_output_properties());
 
     // Plot Gear
     plotControlsModal = new PlotControls($("#plot_controls"),
-        "../static/plot_options.html");
+        "plot_options.html");
 
     // Create the Property Input Form
     propEntryForm = new PropEntryView("property_controls",
