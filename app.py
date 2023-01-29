@@ -1266,13 +1266,12 @@ def info():
 
 
 # ##### DELETE ME FOR DEPLOY - ROUTE FOR SERVING STATIC HTML DURING DEV:
-# ##### USE CASE - navigate to http://127.0.0.1:5000/index to browse page at:
-# ##### /static/index.html
-@app.route('/<string:page_name>/')
-def render_static(page_name):
+# ##### USE CASE - navigate to http://127.0.0.1:5000/live/ to browse index.html:
+@app.route('/live/')
+def render_static():
     if not app.debug:
         flask.abort(404)
-    return app.send_static_file('%s.html' % page_name)
+    return app.send_static_file('index.html')
 
 
 if __name__ == '__main__':
