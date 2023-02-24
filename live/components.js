@@ -164,6 +164,7 @@ class DataModel extends Subject{
         this.aux_id = this.INIT_AUX_ID;
         this.aux_lines = {}
         this.aux_lines['global'] = []
+        this.aux_lines['process'] = []
 
         this.notify(this, DataModel.EVENT_INIT_AUXLINE, null);
     }
@@ -180,11 +181,6 @@ class DataModel extends Subject{
         keys.forEach((key) =>{
             this.points[key] = [];
         });
-
-        // Keep the global aux lines (i.e. assume substance constant)
-        let gl = this.aux_lines['global'];
-        this.aux_lines = {};
-        this.aux_lines['global'] = gl;
 
         this.notify(this, DataModel.EVENT_INIT_POINTS, null);
     }
@@ -939,8 +935,8 @@ Number.prototype.between = function(min, max) {
  * A plot of the data
  */
 class PlotView{
-    TRACEORDER = ['steamdome','p','T','d', 'h', 's', 'x', 'user']
-    TRACENAMES = ['User Data', 'Steam Dome', 'Const. p', 'Const. T', 'Const. d', 'Const. h', 'Const. s', 'Const. x']
+    TRACEORDER = ['steamdome','p','T','d', 'h', 's', 'x', 'process', 'user']
+    TRACENAMES = ['User Data', 'Steam Dome', 'Const. p', 'Const. T', 'Const. d', 'Const. h', 'Const. s', 'Const. x', "Processes"]
     TRACECOLORS = ['']
 
     constructor(divTarget, datasource, units, pointcallback) {
@@ -1076,6 +1072,19 @@ class PlotView{
                 width: 1
             }
         });
+        this.traces.push({
+            x: [],
+            y: [],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'process',
+            hovertemplate: "<b>Process Line</b>",
+            showlegend: false,
+            line: {
+                color: 'rgb(175, 0, 0)',
+                width: 2
+            }
+        });
         this.traces.push({ // hovertemplate created in updatePoints
             x: [],
             y: [],
@@ -1187,6 +1196,7 @@ class PlotView{
             this.draw_auxlines(this.datasource.get_auxlines());
         } else if (event === DataModel.EVENT_AUXLINE_ADD) {
             this.draw_auxlines(source.get_auxlines());
+            this.updatePoints(this.datasource.get_points());
         } else if (event === PlotControls.EVENT_AXIS_UPDATE) {
             let [xprop, yprop] = data;
             this.setAxes(xprop, yprop);
@@ -1212,7 +1222,7 @@ class PlotView{
 
             // Establish the index in the order of the traces
             let ind = this.TRACEORDER.indexOf(prop);
-            if (ind >= 0) { // ind 0 is the user points
+            if (ind >= 0) {
 
                 // Make a placeholder for the updates
                 let iso_update = null;
@@ -1240,6 +1250,22 @@ class PlotView{
                                 iso_update[key].push(null);
                             });
                         }
+                    });
+                } else if (prop === 'process') {
+                    data['process'].forEach((line) => {
+                        // Initialize the trace update on the first call
+                        if (iso_update == null) {
+                            iso_update = {};
+                            Object.keys(line['data']).forEach((key) => {
+                                iso_update[key] = [];
+                            });
+                        }
+
+                        // Add the line to the trace property by property
+                        Object.keys(line['data']).forEach((key) => {
+                            iso_update[key] = iso_update[key].concat(line['data'][key]);
+                            iso_update[key].push(null);
+                        });
                     });
                 }
 
