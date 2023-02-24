@@ -311,12 +311,20 @@ def get_default_lines(subst, prop):
     return vals
 
 
-def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
+def compute_iso_line(subst, n=25, scaling='linear', lims=None, **kwargs):
     """
     Compute a constant line for a given property at a given value
     :param subst: a pyromat substance object
     :param n: The number of points to compute to define the line
     :param scaling: Should point spacing be 'linear' or 'log'
+    :param lims: None or a list of size 2.
+                    Specifies limits to the range that will be computed. The
+                    lims can be specified either as a pair of states or as two
+                    values. The variable that the lims will be interpreted on
+                    depends on the type of isoline. Isolines of:
+                    - p, d, v, s, x: lims applied to Temperature
+                    - h, e: lims applied to density
+                    - T: lims applied to pressure
     :param kwargs: A property specified by name. If 'default' is specified in
                     kwargs, the value of the prop will be ignored and a set
                     of default lines for that prop will be computed (see
@@ -336,6 +344,18 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
     if len(kwargs) != 1:
         raise pm.utility.PMParamError("Specify exactly one property "
                                       "for an isoline")
+
+    # Check if lims was provided
+    if lims is not None:
+        # Check if the user specified lims as states
+        if isinstance(lims[0], dict):
+            # If states, choose the correct limits
+            if any(i in kwargs for i in ['T']):
+                lims = [lims[0]['p'], lims[-1]['p']]
+            elif any(i in kwargs for i in ['h', 'e']):
+                lims = [lims[0]['d'], lims[-1]['d']]
+            else:
+                lims = [lims[0]['T'], lims[-1]['T']]
 
     # We now definitely have only a single property, so pull its name
     prop = list(kwargs.keys())[0]
@@ -381,17 +401,24 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
                 raise pm.utility.PMParamError('x cannot be computed for non-'
                                               'multiphase substances.')
 
+        # Apply limits if they exist
+        if lims is not None:
+            Tmin = np.max([Tmin, np.min(lims)])
+            Tmax = np.min([Tmax, np.max(lims)])
+
         line_T = np.linspace(Tmin, Tmax, n).flatten()
 
         # We can insert the phase change points
         if multiphase and 'p' in kwargs and pc > kwargs['p'] > pt:
             Tsat = subst.Ts(p=kwargs['p'])
-            i_insert = np.argmax(line_T > Tsat)
+            if line_T[0] < Tsat < line_T[-1]:
+                i_insert = np.argmax(line_T > Tsat)
 
-            line_T = np.insert(line_T, i_insert,
-                               np.array([Tsat, Tsat]).flatten())
+                line_T = np.insert(line_T, i_insert,
+                                   np.array([Tsat, Tsat]).flatten())
             x = -np.ones_like(line_T)
-            x[line_T == Tsat] = np.array([0, 1])
+            if np.any(line_T == Tsat):
+                x[line_T == Tsat] = np.array([0, 1])
             kwargs['x'] = x
 
         kwargs['T'] = line_T
@@ -405,6 +432,12 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
             else:
                 dmax = subst.d(T=Tmin, p=pmin)
         dmin = subst.d(T=Tmax, p=pmin)
+
+        # Apply limits if they exist
+        if lims is not None:
+            dmin = np.max([dmin, np.min(lims)])
+            dmax = np.min([dmax, np.max(lims)])
+
         line_d = np.logspace(np.log10(dmin), np.log10(dmax), n).flatten()
         # line_d = np.linspace(dmin, dmax, n)
         kwargs['d'] = line_d
@@ -412,17 +445,23 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
     elif prop in ['T', 'h', 'e']:
         # ph & pe are going to be really slow, but what's better?
 
+        if lims is not None:
+            pmin = np.max([pmin, np.min(lims)])
+            pmax = np.min([pmax, np.max(lims)])
+
         line_p = np.logspace(np.log10(pmin), np.log10(pmax), n).flatten()
 
         # We can insert the phase change points
         if multiphase and 'T' in kwargs and Tc > kwargs['T'] > Tt:
             psat = subst.ps(T=kwargs['T'])
-            i_insert = np.argmax(line_p > psat)
+            if line_p[0] < psat < line_p[-1]:
+                i_insert = np.argmax(line_p > psat)
 
-            line_p = np.insert(line_p, i_insert,
-                               np.array([psat, psat]).flatten())
+                line_p = np.insert(line_p, i_insert,
+                                   np.array([psat, psat]).flatten())
             x = -np.ones_like(line_p)
-            x[line_p == psat] = np.array([1, 0])
+            if np.any(line_p == psat):
+                x[line_p == psat] = np.array([1, 0])
             kwargs['x'] = x
 
         kwargs['p'] = line_p
@@ -994,6 +1033,7 @@ class IsolineRequest(PMGIRequest):
             'd': toarray,
             'v': toarray,
             'x': toarray,
+            'lims': list,
             'default': str,
             'id': str},
             mandatory=['id'])
