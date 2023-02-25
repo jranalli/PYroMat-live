@@ -132,6 +132,21 @@ def ismultiphase(subst):
     #    a new substance model with ps() that has a different meaning.
 
 
+def getphase(subst, state):
+    state_dict = {1:"liquid", 2:"mixture", 3:"vapor", 4:"supercritical"}
+    phases = np.zeros_like(state['x'])
+    Tc, pc = subst.critical()
+
+    Tsat = np.zeros_like(phases)
+    Tsat[state['p']<pc] = subst.Ts(state['p'][state['p']<pc])
+    phases[state['T'] > Tsat] = 3
+    phases[np.bitwise_and(Tsat==0, state['T']<Tc)] = 1
+    phases[state['T'] < Tsat] = 1
+    phases[state['x'] >= 0] = 2
+
+    return phases
+
+
 def json_friendly(unfriendly):
     """Clean up an output dictionary or list for output as JSON.
     friendly = json_friendly(unfriendly)
@@ -277,7 +292,7 @@ def get_default_lines(subst, prop):
 
     vals = None
 
-    multiphase = hasattr(subst, 'ps')
+    multiphase = ismultiphase(subst)
     Tmin, pmin, Tmax, pmax = get_practical_limits(subst)
     if multiphase:
         Tt, pt = subst.triple()
@@ -384,7 +399,7 @@ def compute_iso_line(subst, n=25, scaling='linear', lims=None, **kwargs):
     # We were asked for a single line, so begin computations for that line
 
     # Set P&T limits, including special cases for multiphase
-    multiphase = hasattr(subst, 'Ts')
+    multiphase = ismultiphase(subst)
     Tmin, pmin, Tmax, pmax = get_practical_limits(subst)
     if multiphase:
         Tc, pc = subst.critical()
@@ -472,6 +487,106 @@ def compute_iso_line(subst, n=25, scaling='linear', lims=None, **kwargs):
     states = subst.state(**kwargs)
 
     return states
+
+
+def compute_process_line(subst, states, n=25, props=[]):
+    """
+    Compute a constant line for a given property at a given value
+    :param subst: a pyromat substance object
+    :param states: A list of size 2. Specifies endpoints to the process.
+    :param n: The number of points to compute to define the line
+    :param props: list[str], length 2. Which properties to interpolate in computing
+                    the process line. Overridden if one property is constant.
+    :return: A dict containing arrays of properties representing the line
+    """
+
+    # Test the legality of inputs
+    if len(states) != 2:
+        raise pm.utility.PMParamError("Specify two states for a process.")
+
+    if not all(isinstance(i, dict) for i in states):
+        raise pm.utility.PMParamError("States must be dicts.")
+
+    multiphase = ismultiphase(subst)
+
+    def find_constant(sa, sb, eps=1e-4):
+        """Determines if any properties are roughly constant between two
+        provided states. Only measures d, s, T, h, e, p.
+        :param sa: a pyromat state
+        :param sb: a pyromat state
+        :param eps: float - the percent change in a prop to consider constant.
+        :return: A list of properties that are constant."""
+        possible = ['d', 's', 'T', 'h', 'e', 'p']
+        delta = {}
+        for prop in sa:
+            if prop in possible:
+                delta[prop] = np.abs(sa[prop] - sb[prop]) / sa[prop]
+
+        cprop = []
+        for prop, val in delta.items():
+            if val < eps:
+                cprop.append(prop)
+        return cprop
+
+    st1 = states[0]
+    st2 = states[1]
+
+    const_prop = find_constant(st1, st2)
+    kwargs = {}
+
+    # The goal here is to create a list of which two properties to work with
+    if len(const_prop) == 0:
+        if len(props) != 2:
+            raise pm.utility.PMParamError("Must specify 2 props to interpolate.")
+        # props now contains the two properties of interest
+    else:
+        props = [0, 0]
+        const_prop = const_prop[0]
+        props[0] = const_prop
+
+        # Add the matching parameter to keep one constant
+        if props[0] in ['p', 'd', 'v', 's', 'x']:
+            props[1] = 'T'
+        elif props[0] in ['h', 'e']:
+            props[1] = 'd'
+        elif props[0] in ['T']:
+            props[1] = 'p'
+
+    # Generate an interpolated line for each of the two properties we want
+    for prop in props:
+        if prop in ['T', 's', 'h', 'e']:
+            func = np.linspace
+        elif prop in ['d', 'p', 'v']:
+            func = np.geomspace
+        else:
+            raise ValueError("Should never get here, report a bug!")
+        line = func(st1[prop], st2[prop], n).flatten()
+        kwargs[prop] = line
+
+    # Compute the states
+    proc = subst.state(**kwargs)
+
+    if np.any(proc['x'] > 0) or (getphase(subst, st1) != getphase(subst, st2)):
+        # TODO insert phase transition
+        if np.any(proc['x'] > 0):
+            if const_prop in ['p', 'T']:
+                i_insert = np.argmax(proc['x'] > 0)
+                ins_state = subst.state(x=round(proc['x'][i_insert]), p=proc[const_prop][i_insert])
+                for prop in ins_state:
+                    proc[prop] = np.insert(proc[prop], i_insert, np.array(proc[const_prop][i_insert]).flatten())
+        else:
+            if const_prop in ['p', 'T']:
+                i_insert = np.argmax(np.abs(np.diff(getphase(subst, proc))))+1
+                xins = [1, 0]
+                if const_prop == 'p':
+                    xins = [0,1]
+                ins_dict = {'x': xins, const_prop: proc[const_prop][i_insert]}
+                ins_state = subst.state(**ins_dict)
+                for prop in ins_state:
+                    proc[prop] = np.insert(proc[prop], i_insert, ins_state[prop]).flatten()
+
+
+    return proc
 
 
 ###
