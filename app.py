@@ -566,25 +566,25 @@ def compute_process_line(subst, states, n=25, props=[]):
     # Compute the states
     proc = subst.state(**kwargs)
 
-    if np.any(proc['x'] > 0) or (getphase(subst, st1) != getphase(subst, st2)):
-        # TODO insert phase transition
-        if np.any(proc['x'] > 0):
-            if const_prop in ['p', 'T']:
-                i_insert = np.argmax(proc['x'] > 0)
-                ins_state = subst.state(x=round(proc['x'][i_insert]), p=proc[const_prop][i_insert])
-                for prop in ins_state:
-                    proc[prop] = np.insert(proc[prop], i_insert, np.array(proc[const_prop][i_insert]).flatten())
-        else:
-            if const_prop in ['p', 'T']:
-                i_insert = np.argmax(np.abs(np.diff(getphase(subst, proc))))+1
-                xins = [1, 0]
-                if const_prop == 'p':
-                    xins = [0,1]
-                ins_dict = {'x': xins, const_prop: proc[const_prop][i_insert]}
-                ins_state = subst.state(**ins_dict)
-                for prop in ins_state:
-                    proc[prop] = np.insert(proc[prop], i_insert, ins_state[prop]).flatten()
-
+    if multiphase:
+        if np.any(proc['x'] > 0) or (getphase(subst, st1) != getphase(subst, st2)):
+            # TODO improve phase transition
+            if np.any(proc['x'] > 0):
+                if const_prop in ['p', 'T']:
+                    i_insert = np.argmax(proc['x'] > 0)
+                    ins_state = subst.state(x=round(proc['x'][i_insert]), p=proc[const_prop][i_insert])
+                    for prop in ins_state:
+                        proc[prop] = np.insert(proc[prop], i_insert, np.array(proc[const_prop][i_insert]).flatten())
+            else:
+                if const_prop in ['p', 'T']:
+                    i_insert = np.argmax(np.abs(np.diff(getphase(subst, proc))))+1
+                    xins = [1, 0]
+                    if const_prop == 'p':
+                        xins = [0,1]
+                    ins_dict = {'x': xins, const_prop: proc[const_prop][i_insert]}
+                    ins_state = subst.state(**ins_dict)
+                    for prop in ins_state:
+                        proc[prop] = np.insert(proc[prop], i_insert, ins_state[prop]).flatten()
 
     return proc
 
