@@ -83,10 +83,10 @@ function init(){
 
     //TODO REVISE THIS FORM
     // Create the Property Input Form
-    propEntryForm = new PropEntryView("property_controls",
-        dataModel.get_input_properties(),
-        unitModel.get_units_for_prop(dataModel.get_input_properties()),
-        compute_cycle);
+    // propEntryForm = new PropEntryView("property_controls",
+    //     dataModel.get_input_properties(),
+    //     unitModel.get_units_for_prop(dataModel.get_input_properties()),
+    //     compute_cycle);
 
     // Create plot, have it listen to the other objects
     plotView = new PlotView("plot_display",
@@ -258,46 +258,52 @@ function compute_point(state_props){
 
 
 function compute_cycle(){
-    var p1, p2, p3, p4
-    ajax_point(dataModel.get_substance(),
-        {p:1, T:300},
-        unitModel.get_units(),
-        (response) => {
+    let items = $("input","#cycle-params");
+    let formData = {};
+    items.each((id, box) =>{
+        if (box.type === 'number') {
+            formData[box.id] = parseFloat(box.value);
+        }
+    });
+
+    var p1, p2s, p2, p3, p4s, p4
+    var sub = dataModel.get_substance();
+    var units = unitModel.get_units();
+    ajax_point(sub,{p:formData['lowPress'], x:0}, units)
+        .then((response) => {
             p1 = response.data;
-            ajax_point(
-                dataModel.get_substance(),
-                {p: 10, s: p1['s']},
-                unitModel.get_units(),
-                (response) => {
-                    p2 = response.data;
-                    then(p1,p2)
-                });
-        });
-}
-function then(p1,p2) {
-    var p3, p4
-    ajax_point(dataModel.get_substance(),
-        {p: 10, T: 500},
-        unitModel.get_units(),
-        (response) => {
+            return ajax_point(sub,{p:formData['hiPress'], s:p1['s']}, units);  // Compute P2s
+        }).then((response) =>{
+            p2s = response.data;
+            let h2a = (p2s['h'] - p1['h'])/formData['pumpEff'] + p1['h'];
+            return ajax_point(sub,{p:formData['hiPress'], h:h2a}, units);  // Compute P2a
+        }).then((response) =>{
+            p2 = response.data;
+            return ajax_point(sub,{p:formData['hiPress'], T:formData['hiTemp']}, units); // Compute P3
+        }).then((response) =>{
             p3 = response.data;
-            ajax_point(
-                dataModel.get_substance(),
-                {p: 1, s: p3['s']},
-                unitModel.get_units(),
-                (response) => {
-                    p4 = response.data;
-                    dataModel.add_point(p1);
-                    dataModel.add_point(p2);
-                    dataModel.add_point(p3);
-                    dataModel.add_point(p4);
-                    compute_processline({p1: p1, p2: p2})
-                    compute_processline({p1: p2, p2: p3})
-                    compute_processline({p1: p3, p2: p4})
-                    compute_processline({p1: p4, p2: p1})
-                });
-        });
+            return ajax_point(sub,{p:formData['lowPress'], s:p3['s']}, units); // Compute P4s
+        }).then((response)=>{
+            p4s = response.data;
+            let h4a = p3['h'] - (p3['h'] - p4s['h'])*formData['pumpEff'];
+            return ajax_point(sub,{p:formData['lowPress'], h:h4a}, units); // Compute P4a
+        }).then((response)=>{
+            // All points are done
+            p4 = response.data;
+            dataModel.add_point(p1);
+            dataModel.add_point(p2s);
+            dataModel.add_point(p2);
+            dataModel.add_point(p3);
+            dataModel.add_point(p4s);
+            dataModel.add_point(p4);
+            compute_processline({p1:p1, p2:p2, props:['T', 's']});
+            compute_processline({p1:p2, p2:p3});
+            compute_processline({p1:p3, p2:p4, props:['T', 's']});
+            compute_processline({p1:p4, p2:p1});
+
+    });
 }
+
 
 function compute_processline(states={}){
     ajax_processline(dataModel.get_substance(),

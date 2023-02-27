@@ -68,6 +68,44 @@
         <div id="property_controls" class="property-controls">
             <h3 class="sec-title">Property Input
             <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
+            <form id="cycle-params">
+
+                <fieldset>
+                    <label for="lowPress">Low P:
+                        <input type="number" id="lowPress">
+                    </label>
+                    <br>
+
+                    <label for="hiPress">High P:
+                        <input type="number" id="hiPress">
+                    </label>
+                    <br>
+                    <label for="hiTemp">High T:
+                        <input type="number" id="hiTemp">
+                    </label>
+                    <br>
+                    <label for="mdot">mdot:
+                        <input type="number" id="mdot">
+                    </label>
+                    <br>
+                    <label for="fuelEff">FuelEff:
+                        <input type="number" id="fuelEff">
+                    </label>
+                    <br>
+                    <label for="pumpEff">PumpEff:
+                        <input type="number" id="pumpEff">
+                    </label>
+                    <br>
+                    <label for="turbEff">TurbEff:
+                        <input type="number" id="turbEff">
+                    </label>
+                    <br>
+                    <label for="cost">Sys Cost:
+                        <input type="number" id="cost">
+                    </label>
+                </fieldset>
+                <input type="button" id="testbutton" value="Compute" onclick="compute_cycle()"/>
+            </form>
         </div>
         <div id="modal_unitspicker" class="window2">
         </div>

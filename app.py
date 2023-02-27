@@ -489,7 +489,7 @@ def compute_iso_line(subst, n=25, scaling='linear', lims=None, **kwargs):
     return states
 
 
-def compute_process_line(subst, states, n=25, props=[]):
+def compute_process_line(subst, states, n=25, props=['T', 's']):
     """
     Compute a constant line for a given property at a given value
     :param subst: a pyromat substance object

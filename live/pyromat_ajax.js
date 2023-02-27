@@ -57,7 +57,7 @@ function ajax_info(callback){
 function ajax_point(substance, state_props=null, units=null, callback=null, ignore_err=false){
     let requestroute = "/api/state";
     let postData = build_postData(substance, state_props, units);
-    ajax_route(requestroute, postData, callback, ignore_err)
+    return ajax_route(requestroute, postData, callback, ignore_err)
 }
 
 
@@ -101,7 +101,7 @@ function ajax_point(substance, state_props=null, units=null, callback=null, igno
 function ajax_isoline(substance, state_props=null, units=null, callback=null, ignore_err=false){
     let requestroute = "/api/isoline";
     let postData = build_postData(substance, state_props, units);
-    ajax_route(requestroute, postData, callback, ignore_err)
+    return ajax_route(requestroute, postData, callback, ignore_err)
 }
 
 
@@ -145,7 +145,7 @@ function ajax_isoline(substance, state_props=null, units=null, callback=null, ig
 function ajax_processline(substance, state_props=null, units=null, callback=null, ignore_err=false){
     let requestroute = "/api/processline";
     let postData = build_postData(substance, state_props, units);
-    ajax_route(requestroute, postData, callback, ignore_err)
+    return ajax_route(requestroute, postData, callback, ignore_err)
 }
 
 
@@ -180,7 +180,7 @@ function ajax_processline(substance, state_props=null, units=null, callback=null
 function ajax_saturation(substance, state_props=null, units=null, callback=null, ignore_err=false){
     let requestroute = "/api/saturation";
     let postData = build_postData(substance, state_props, units);
-    ajax_route(requestroute, postData, callback, ignore_err)
+    return ajax_route(requestroute, postData, callback, ignore_err)
 }
 
 
@@ -195,7 +195,7 @@ function ajax_saturation(substance, state_props=null, units=null, callback=null,
 function ajax_route(route, postData, callback, ignore_err=false){
     let requestroute = route;
 
-    $.ajax({
+    return $.ajax({
         url: requestroute,
         type: "POST",
         data: JSON.stringify(postData),
