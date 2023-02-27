@@ -321,7 +321,7 @@ class DataModel extends Subject{
     delete_auxlines(id){
         // Make sure we've computed auxlines for this point first
         if (id in this.aux_lines){
-            delete this.aux_lines[id];
+            this.aux_lines[id] = [];
             this.notify(this, DataModel.EVENT_AUXLINE_DELETE, id);
         }
     }
@@ -1194,7 +1194,7 @@ class PlotView{
         } else if (event === PlotControls.EVENT_ISOLINE_VISIBILITY){
             this.dispisos = data;
             this.draw_auxlines(this.datasource.get_auxlines());
-        } else if (event === DataModel.EVENT_AUXLINE_ADD) {
+        } else if (event === DataModel.EVENT_AUXLINE_ADD || event === DataModel.EVENT_AUXLINE_DELETE) {
             this.draw_auxlines(source.get_auxlines());
             this.updatePoints(this.datasource.get_points());
         } else if (event === PlotControls.EVENT_AXIS_UPDATE) {

@@ -258,6 +258,7 @@ function compute_point(state_props){
 
 
 function compute_cycle(){
+    clear_cycle();
     let items = $("input","#cycle-params");
     let formData = {};
     items.each((id, box) =>{
@@ -266,9 +267,9 @@ function compute_cycle(){
         }
     });
 
-    var p1, p2s, p2, p3, p4s, p4
-    var sub = dataModel.get_substance();
-    var units = unitModel.get_units();
+    let p1, p2s, p2, p3, p4s, p4
+    let sub = dataModel.get_substance();
+    let units = unitModel.get_units();
     ajax_point(sub,{p:formData['lowPress'], x:0}, units)
         .then((response) => {
             p1 = response.data;
@@ -304,7 +305,10 @@ function compute_cycle(){
     });
 }
 
-
+function clear_cycle() {
+    dataModel.init_points();
+    dataModel.delete_auxlines('process');
+}
 function compute_processline(states={}){
     ajax_processline(dataModel.get_substance(),
         states,
