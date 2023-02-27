@@ -509,7 +509,7 @@ def compute_process_line(subst, states, n=25, props=[]):
 
     multiphase = ismultiphase(subst)
 
-    def find_constant(sa, sb, eps=1e-4):
+    def find_constant(sa, sb, eps=1e-3):
         """Determines if any properties are roughly constant between two
         provided states. Only measures d, s, T, h, e, p.
         :param sa: a pyromat state
@@ -1177,6 +1177,54 @@ class IsolineRequest(PMGIRequest):
             return True
 
 
+class ProcessRequest(PMGIRequest):
+    """
+    This class will handle requests for an isoline
+    """
+
+    def __init__(self, args):
+        # Clean initialization
+        PMGIRequest.__init__(self, args)
+
+        self.require(types={
+            'p1': dict,
+            'p2': dict,
+            'props': list,
+            'id': str},
+            mandatory=['id', 'p1', 'p2'])
+
+    def process(self):
+        """Process the request
+        This method is responsible for populating the "out" member dict with
+        correctly formatted data that can be returned as a JSON object.
+        """
+        # If there was an error, abort the processing
+        if self.mh:
+            self.mh.message('Processing aborted due to error.')
+            return True
+
+        args = self.args.copy()
+        # Leave only the property arguments
+        subst = self.get_substance(args.pop('id'))
+        if subst is None:
+            return True
+        p1o = args.pop('p1')
+        p2o = args.pop('p2')
+        p1 = {}
+        p2 = {}
+        for key in p1o:
+            if key in ['p','T','s','h','e','u','d','v','x']:
+                p1[key] = np.array(p1o[key])
+                p2[key] = np.array(p2o[key])
+
+        try:
+            self.data = compute_process_line(subst, [p1,p2], n=50, **args)
+        except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
+            self.mh.error('Failed to generate process line.')
+            self.mh.message(repr(sys.exc_info()[1]))
+            return True
+
+
 class SaturationRequest(PMGIRequest):
     """
     This class will handle requests for saturation properties.
@@ -1409,6 +1457,16 @@ def isoline():
     isr.process_units()
     isr.process()
     return isr.output(), 200
+
+
+# The isoline route computes isolines
+@app.route(f'{PREFIX}/processline', methods=['POST', 'GET'])
+def processline():
+    # Read in the request data to an args dict
+    psr = ProcessRequest(request)
+    psr.process_units()
+    psr.process()
+    return psr.output(), 200
 
 
 # The info pmgi will return the results of queries (e.g. substance search)

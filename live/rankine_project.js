@@ -86,7 +86,7 @@ function init(){
     propEntryForm = new PropEntryView("property_controls",
         dataModel.get_input_properties(),
         unitModel.get_units_for_prop(dataModel.get_input_properties()),
-        compute_point);
+        compute_cycle);
 
     // Create plot, have it listen to the other objects
     plotView = new PlotView("plot_display",
@@ -105,7 +105,6 @@ function init(){
     dataModel.addListener(tableView);
     tableControlsModal.addListener(tableView);
 
-    compute_cycle()
 }
 
 
@@ -271,10 +270,14 @@ function compute_cycle(){
                 unitModel.get_units(),
                 (response) => {
                     p2 = response.data;
+                    then(p1,p2)
                 });
         });
+}
+function then(p1,p2) {
+    var p3, p4
     ajax_point(dataModel.get_substance(),
-        {p:10, T:500},
+        {p: 10, T: 500},
         unitModel.get_units(),
         (response) => {
             p3 = response.data;
@@ -288,21 +291,21 @@ function compute_cycle(){
                     dataModel.add_point(p2);
                     dataModel.add_point(p3);
                     dataModel.add_point(p4);
-                    compute_processline({s:p1['s'], lims:[p1,p2]})
-                    compute_processline({p:p2['p'], lims:[p2,p3]})
-                    compute_processline({s:p3['s'], lims:[p3,p4]})
-                    compute_processline({p:p4['p'], lims:[p4,p1]})
+                    compute_processline({p1: p1, p2: p2})
+                    compute_processline({p1: p2, p2: p3})
+                    compute_processline({p1: p3, p2: p4})
+                    compute_processline({p1: p4, p2: p1})
                 });
         });
 }
 
-function compute_processline(props={}){
-    ajax_isoline(dataModel.get_substance(),
-        props,
+function compute_processline(states={}){
+    ajax_processline(dataModel.get_substance(),
+        states,
         unitModel.get_units(),
         (response) => {
             // Get the property that this line was for (maybe remove default)
-            let keys = Object.keys(props);
+            let keys = Object.keys(states);
             if (keys.indexOf("default") > -1){
                 keys.splice(keys.indexOf("default", 1))
             }

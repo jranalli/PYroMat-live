@@ -106,6 +106,50 @@ function ajax_isoline(substance, state_props=null, units=null, callback=null, ig
 
 
 /**
+ * Acquire process line data from PYroMat API.
+ *
+ * Fields in response are:
+ *  - args (copy of args passed to request)
+ *  - data (varies based on args, see below)
+ *  - message (related to erros)
+ *  - units (active units)
+ *
+ * If state_props contained a single isoline (e.g. {T:300}), the data field is
+ * arrays by property
+ *  - data
+ *    - T (array of T)
+ *    - p (array of p)
+ *    - ...
+ *
+ * If state_props contained the 'default' flag (e.g. {T:null, default:true}),
+ * or state_props asked for an array (e.g. {T=[300,400]}
+ * an array of lines is returned in the data field.
+ *  - data is array of lines
+ *    - data[0]
+ *      - T (array of T)
+ *      - p (array of p)
+ *      - ...
+ *    - data[1]
+ *      - T (array of T)
+ *      - p (array of p)
+ *      - ...
+ *
+ * @param substance - str, the substance id (e.g. mp.H2O)
+ * @param state_props - dict of properties to send (e.g. {T:300}
+ * @param units - dict of the units to apply
+ * @param callback - function to be called upon completion. Must accept
+ *  argument as callback(response).
+ * @param ignore_err - bool, if true, errors are ignored to be handled by the
+ *  callback.
+ */
+function ajax_processline(substance, state_props=null, units=null, callback=null, ignore_err=false){
+    let requestroute = "/api/processline";
+    let postData = build_postData(substance, state_props, units);
+    ajax_route(requestroute, postData, callback, ignore_err)
+}
+
+
+/**
  * Acquire saturation data from PYroMat API.
  *
  * Fields in response are:
