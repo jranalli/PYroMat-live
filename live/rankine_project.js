@@ -61,6 +61,8 @@ function init(){
     dataModel = new DataModel(subid);
     unitModel = new UnitModel(infodata.data.legalunits, units);
 
+    config_unit_labels(unitModel.get_units());
+
     // Compute the isoline data for the plot
     calculate_plot_isolines();
 
@@ -162,6 +164,20 @@ function display_substance(sub){
     $("#sub_string").text(label);
 }
 
+
+/**
+ * Update the labels that show the current units
+ */
+function config_unit_labels(units){
+    let ids = ["lbllowPress", "lblhiPress", "lblhiTemp", "lblmdot"]
+    let unit_pair = {"lbllowPress":units["pressure"], "lblhiPress":units["pressure"], "lblhiTemp":units["temperature"], "lblmdot":units["matter"]+"/s"};
+    ids.forEach((id)=>{
+        let txt = $("#"+id).text();
+        $("#"+id).text(txt+ " ("+unit_pair[id]+"):");
+    });
+}
+
+
 /**
  * Decides which isolines to compute and passes the request along.
  */
@@ -259,6 +275,11 @@ function compute_point(state_props){
 
 function compute_cycle(){
     clear_cycle();
+
+    let FuelCost = 7e-6 // $/J ($0.007/MJ)
+    let EnergyValue = 2.8e-5 // $/kJ ($0.10/kWh)
+    let nyrs = 5;
+
     let items = $("input","#cycle-params");
     let formData = {};
     items.each((id, box) =>{
@@ -286,26 +307,42 @@ function compute_cycle(){
             return ajax_point(sub,{p:formData['lowPress'], s:p3['s']}, units); // Compute P4s
         }).then((response)=>{
             p4s = response.data;
-            let h4a = p3['h'] - (p3['h'] - p4s['h'])*formData['pumpEff'];
+            let h4a = p3['h'] - (p3['h'] - p4s['h'])*formData['turbEff'];
             return ajax_point(sub,{p:formData['lowPress'], h:h4a}, units); // Compute P4a
         }).then((response)=>{
             // All points are done
             p4 = response.data;
-            dataModel.add_point(p1);
-            dataModel.add_point(p2s);
-            dataModel.add_point(p2);
-            dataModel.add_point(p3);
-            dataModel.add_point(p4s);
-            dataModel.add_point(p4);
+            dataModel.add_point(p1, "1");
+            dataModel.add_point(p2s, "2s");
+            dataModel.add_point(p2, "2a");
+            dataModel.add_point(p3, "3");
+            dataModel.add_point(p4s, "4s");
+            dataModel.add_point(p4, "4a");
             compute_processline({p1:p1, p2:p2, props:['T', 's']});
             compute_processline({p1:p2, p2:p3});
             compute_processline({p1:p3, p2:p4, props:['T', 's']});
             compute_processline({p1:p4, p2:p1});
 
+            let qhi = p3['h'] - p2['h'];
+            let qlo = p4['h'] - p1['h'];
+            let wnet = (p3['h'] - p4['h']) - (p2['h'] - p1['h']);
+            let eff = wnet/qhi;
+            let life_fc = (formData['mdot'] * qhi)/formData['fuelEff'] * FuelCost * 60*60*24*365*nyrs;
+            let life_tc = life_fc + formData['cost'];
+            let life_svg = formData['mdot'] * wnet * EnergyValue * 60*60*24*365*nyrs;
+
+            $("#out_efficiency").text((eff*100).toLocaleString('en-US', {maximumFractionDigits: 1}));
+            $("#out_power").text((wnet*formData['mdot']).toLocaleString('en-US', {maximumFractionDigits: 0}));
+            $("#out_energy").text((wnet*formData['mdot']*24*365).toLocaleString('en-US', {maximumFractionDigits: 0}));
+            $("#out_annfuel").text((life_fc/nyrs).toLocaleString('en-US', {maximumFractionDigits: 0}));
+            $("#out_annearn").text((life_svg/nyrs).toLocaleString('en-US', {maximumFractionDigits: 0}));
+            $("#out_annprofit").text(((life_svg-life_fc)/nyrs).toLocaleString('en-US', {maximumFractionDigits: 0}));
+            $("#output_data").show();
     });
 }
 
 function clear_cycle() {
+    $("#output_data").hide();
     dataModel.init_points();
     dataModel.delete_auxlines('process');
 }

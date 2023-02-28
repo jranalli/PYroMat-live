@@ -260,20 +260,26 @@ class DataModel extends Subject{
      * Add a new point to the list
      * @param point - A dict keyed by property. An integer ID will be added to
      *                  the point for internal tracking.
+     * @param id - A dict keyed by property. Overrides integer id
      */
-    add_point(point){
+    add_point(point, id=null){
         if (Object.keys(point).length == 0){
             return;
         }
         let pt = Object.assign({}, point);  // Copy object
-        pt['ptid'] = this.point_id;  // Append the id to the point
+
+        if (id === null) {
+            pt['ptid'] = this.point_id;  // Append the id to the point
+            this.point_id++;  // Increment the id
+        } else {
+            pt['ptid'] = id;
+        }
 
         // Push to the existing array
         for (const key in pt) {
             this.points[key].push(pt[key]);
         }
-        // Increment the id and notify
-        this.point_id++;
+
         this.notify(this, DataModel.EVENT_POINT_ADD, pt);
     }
 

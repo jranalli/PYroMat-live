@@ -66,27 +66,23 @@
 
         <!-- Property Input JB-->
         <div id="property_controls" class="property-controls">
-            <h3 class="sec-title">Property Input
+            <h3 class="sec-title">Cycle Input
             <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
             <form id="cycle-params">
 
                 <fieldset>
-                    <label for="lowPress">Low P:
-                        <input type="number" id="lowPress">
-                    </label>
+                    <label id="lbllowPress" for="lowPress">Low P</label>
+                    <input type="number" id="lowPress">
                     <br>
 
-                    <label for="hiPress">High P:
-                        <input type="number" id="hiPress">
-                    </label>
+                    <label id="lblhiPress" for="hiPress">High P</label>
+                    <input type="number" id="hiPress">
                     <br>
-                    <label for="hiTemp">High T:
-                        <input type="number" id="hiTemp">
-                    </label>
+                    <label id="lblhiTemp" for="hiTemp">High T</label>
+                    <input type="number" id="hiTemp">
                     <br>
-                    <label for="mdot">mdot:
-                        <input type="number" id="mdot">
-                    </label>
+                    <label id="lblmdot" for="mdot">mdot</label>
+                    <input type="number" id="mdot">
                     <br>
                     <label for="fuelEff">FuelEff:
                         <input type="number" id="fuelEff">
@@ -131,6 +127,25 @@
     </div>
     <div id="property_table">
     </div>
+
+    <h3 class="subtitle">Cycle Outputs</h3>
+
+    <div id="output_data" style="margin-left:50px; display: none">
+        <label>Efficiency: </label><label id="out_efficiency">95</label><label> %</label>
+        <br>
+        <label>Net Power: </label><label id="out_power">2500</label><label> kW</label>
+        <br>
+        <label>Annual Energy: </label><label id="out_energy">85000</label><label> kWh</label>
+        <br>
+        <label>Annual Fuel Cost: $ </label><label id="out_annfuel">85000</label>
+        <br>
+        <label>Annual Earnings: $ </label><label id="out_annearn">85000</label>
+        <br>
+        <label>Annual Profit: $ </label><label id="out_annprofit">85000</label>
+        <br>
+    </div>
+    <br><br><br><br><br>
+
 </div>
 </body>
 </html>
