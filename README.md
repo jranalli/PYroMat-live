@@ -46,3 +46,15 @@ https://127.0.0.1:5000/live/
 ## Demo hosting
 A demo is currently hosted at [PythonAnywhere](https://jranalli.pythonanywhere.com/)
 and a live version is hosted at [PYroMat](http://pyromat.org/live)
+
+
+
+## License
+Copyright (c) 2015-2022 Christopher R. Martin
+
+Like its base project [PYroMat](https://github.com/chmarti1/PYroMat), PYroMat-live is released under the GNU [General Public License v3.0](http://www.gnu.org/licenses/gpl-3.0.en.html).
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
