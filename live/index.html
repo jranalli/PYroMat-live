@@ -8,7 +8,7 @@
     <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.11.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="cookies.js" type="text/javascript"></script>
     <script src="modal_substance.js" type="text/javascript"></script>
@@ -146,35 +146,44 @@
             <div id="modal_substancepicker" class="window1">
             </div>
 
-            <div class="plot-wrapper">
+            <div class="container-fluid">
+                <div class="row">
+                    <!-- Property Input JB-->
+                    <div class="col-md-4">
+                        <div id="property_controls" class="windowed">
+                            <h3 class="sec-title">Property Input
+                                <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
+                        </div>
 
-                <!-- Property Input JB-->
-                <div id="property_controls" class="property-controls">
-                    <h3 class="sec-title">Property Input
-                        <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
-                </div>
-                <div id="modal_unitspicker" class="window2">
+                    </div>
+
+                    <!-- Plot JB-->
+                    <div class="col-md">
+                        <div id="plot_display" class="windowed">
+                            <h3 class="sec-title">Plot
+                                <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
+                            </h3>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Plot JB-->
-                <div id="plot_display" class="plot-display">
-                    <h3 class="sec-title">Plot
-                        <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
-                    </h3>
-                </div>
 
-                <div id="plot_controls" class="window3">
-                </div>
+            </div>
+            <div id="modal_unitspicker" class="window2">
+            </div>
+            <div id="plot_controls" class="window3">
             </div>
 
             <!-- Property Tables JB-->
-            <h3 class="subtitle">Property Table
-                <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_toggle_tablecontrols()"><i class="fa fa-cog"></i></gearbutton>
-            </h3>
+            <div class="container">
+                <h3 class="subtitle">Property Table
+                    <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_toggle_tablecontrols()"><i class="fa fa-cog"></i></gearbutton>
+                </h3>
 
-            <div id="property_selection_outer" class="window4">
-            </div>
-            <div id="property_table">
+                <div id="property_selection_outer" class="window4">
+                </div>
+                <div id="property_table">
+                </div>
             </div>
         </div>
     </div>

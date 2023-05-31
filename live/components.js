@@ -1126,7 +1126,8 @@ class PlotView{
                 autorange: true
             },
             margin: { t: 0 },
-            showlegend: false
+            showlegend: false,
+            modebar: {orientation: "v"}
         };
     }
 
