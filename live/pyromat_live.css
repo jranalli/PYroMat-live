@@ -1,7 +1,7 @@
 button, input[type=button] {
-  background-color: var(--pyro-gray, gray);
-  border: 3px solid var(--pyro-black, black);
-  color: var(--pyro-black, black);
+  background-color: #f0f0f0;
+  border: 3px solid black;
+  color: black;
   border-radius: 10px;
   padding: 6px 6px;
   font-size: 12px;
@@ -10,8 +10,8 @@ button, input[type=button] {
 }
 
 button:hover, input[type=button]:hover {
-  border: 3px solid var(--pyro-orange, black);
-  color: var(--pyro-orange, black);
+  border: 3px solid #ef5423;
+  color: #ef5423;
 }
 
 .plot-wrapper{

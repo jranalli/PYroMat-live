@@ -105,12 +105,24 @@ a:focus {
     /* background-color: var(--pyro-black, black); */
     /* background-color: #00005f; */
     background-color: white;
-    border: 3px solid var(--pyro-black, black);
+    border: 3px solid black;
     border-radius: 40px;
     /* color: white; */
     color: black;
     font-family: Arial, sans-serif;
     margin: 0px 0px 50px 0px;
+}
+
+.subtitle {
+    text-align:center;
+    border: 3px solid black;
+    border-radius: 40px;
+    color: black;
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    margin-top: 50px;
+    margin-bottom: 50px;
+    font-size: 20px;
 }
 
 .icon {
