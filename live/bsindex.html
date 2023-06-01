@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+    <link rel="stylesheet" href="bsindex.css">
+    <!--    https://bootstrapious.com/p/bootstrap-sidebar  -->
+    <!--    fixed scroll is available too  -->
+
+    <!-- Font Awesome JS -->
+    <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/solid.js" integrity="sha384-tzzSw1/Vo+0N5UhStP3bvwWPq+uvzCMfrN1fEFe+xBmv1C/AtVX5K0uZtmcHitFZ" crossorigin="anonymous"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/fontawesome.js" integrity="sha384-6OIrr52G08NpOFSZdxxz1xdNSndlD4vdcf/q2myIUVO0VsqaGHJsB0RaBE01VTOY" crossorigin="anonymous"></script>
+
+    <title>Home|PYroMat</title>
+</head>
+<body>
+
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <!-- <h3>Bootstrap Sidebar</h3>-->
+                <div class="icon">
+                    <a href='index.html'><img src='fig/PYro_iBlack_Small.png'></img></a>
+                </div>
+            </div>
+
+            <ul class="list-unstyled components">
+                <!-- <p>Dummy Heading</p> -->
+                <li class="active">
+                    <a href="about.html">About</a>
+                </li>
+                <li>
+                    <a href="features.html">Features</a>
+                </li>
+                <li>
+                    <a href="download.html">Download</a>
+                </li>
+                <li>
+                    <a href="documentation.html">Docs</a>
+                </li>
+                <li>
+                    <a href="#liveSubmenu" data-toggle="collapse" aria-expanded="false" class="dropdown-toggle">Live</a>
+                    <ul class="collapse list-unstyled" id="liveSubmenu">
+                        <li>
+                            <a href="live/pointdata.html">Property Calculator</a>
+                        </li>
+                        <li>
+                            <a href="live/rankinedesign.html">Rankine Design</a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+
+
+
+        <div id="content">
+            <nav class="navbar navbar-expand-lg navbar-dark bg-light">
+                    <div class="container-fluid">
+
+<!--                        <button type="button" id="sidebarCollapse" class="btn btn-info">-->
+<!--                            <i class="fas fa-align-left"></i>-->
+<!--                            <span>Toggle Sidebar</span>-->
+<!--                        </button>-->
+
+                        <H1>PYroMat</H1>
+                        <button class="btn btn-dark d-inline-block d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                            <i class="fas fa-align-justify"></i>
+                        </button>
+                        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                            <ul class="nav navbar-nav d-md-none ml-auto">
+                                <li class="nav-item active">
+                                    <a class="nav-link" href="index.html">Home</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="about.html">About</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="features.html">Features</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="download.html">Download</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="documentation.html">Docs</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#">Live</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+            </nav>
+
+            <div class="container">
+
+                <div class="title">
+                <h1>PYroMat</h1>
+                <img width="125px" src="./fig/PYro_Black_Small.png"></img>
+                <h2>Thermodynamic Properties<br> in Python</h2>
+                </div>
+
+                <div class="tagline">
+                Access properties of<br>
+                nearly <b>1,000 substances</b><br>
+                in only a few lines of Python
+                </div>
+
+                <pre class="code" style="width:350px;margin:auto;">
+>>> import pyromat as pm
+>>> H2O = pm.get('mp.H2O')
+>>> h = H2O.h(T=450., p=3.)</pre>
+
+                <div class="tagline">
+                Simple, accurate, and versatile <br>
+                Great for <b>teaching</b><br>
+                Great for <b>research and design</b><br>
+                </div>
+
+                <div class=figure>
+                <a href="./doc_howto.html#cycle_brayton"><img src="fig/brayton.png" width=450px></a>
+                </div>
+                <div class=figure>
+                <a href="./doc_howto.html#plot_surf"><img src="fig/d2.png" width=400px></a>
+                </div>
+
+                <div class="tagline">
+                PYroMat's <b>array support</b><br>
+                makes <b>plotting</b><br>
+                and working with <b>big data sets</b><br>
+                easy.
+                </div>
+
+                <pre class="code" style="width:350px;margin: auto;">
+>>> import numpy as np
+>>> O2 = pm.get('ig.O2')
+>>> import numpy as np
+>>> T = np.linspace(300.,2000.,101)
+>>> h = O2.h(T)
+>>> h.shape
+(101,)
+>>> p = np.linspace(1.,100.,101)
+>>> s = O2.s(T,p)
+>>> s.shape
+(101,)
+>>> T = T.reshape((T.size,1))
+>>> s = O2.s(T,p)
+>>> s.shape
+(101, 101)</pre>
+
+                <pre class="code" style="width:350px;margin: auto;">
+>>> import matplotlib.pyplot as plt
+>>> T = np.linspace(300.,5000.,201)
+>>> air = pm.get('ig.air')
+>>> plt.plot(T, air.cp(T))</pre>
+
+                <div class=figure>
+                    <img src="./fig/air_cp.png" width=400px;>
+                </div>
+
+            </div>
+            <div id="contact">
+                <div class="line"></div>
+                Authored By:<br>
+                Christopher R. Martin, Ph.D.<br>
+                Associate Professor of Mechanical Engineering<br>
+                The Pennsylvania State University, Altoona College<br>
+                <a href="mailto:crm28@psu.edu">crm28@psu.edu</a><br>
+                <br>
+                &copy;2021 Released under the <a target="blank" href="https://www.gnu.org/licenses/gpl-3.0.en.html">GPLv3 License</a>
+            </div>
+        </div>
+
+
+    </div>
+
+
+    <!-- jQuery CDN - Slim version (=without AJAX) -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <!-- Popper.JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+
+    <script>
+        // $(document).ready(function () {
+        //
+        //     $('#sidebarCollapse').on('click', function () {
+        //         $('#sidebar').toggleClass('active');
+        //     });
+        //
+        // });
+    </script>
+</body>
+</html>
