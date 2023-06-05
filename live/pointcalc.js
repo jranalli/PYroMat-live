@@ -23,29 +23,6 @@ var tableView;
  */
 $(function(){
 
-//     $('#plotpopover').attr("data-content",`<form>
-//   <div class='form-group'>
-//     <label for='exampleInputEmail1'>Email address</label>
-//     <input type='email' class='form-control' id='exampleInputEmail1' aria-describedby='emailHelp' placeholder='Enter email'>
-//     <small id='emailHelp' class='form-text text-muted'>We'll never share your email with anyone else.</small>
-//   </div>
-//   <div class='form-group'>
-//     <label for='exampleInputPassword1'>Password</label>
-//     <input type='password' class='form-control' id='exampleInputPassword1' placeholder='Password'>
-//   </div>
-//   <div class='form-group form-check'>
-//     <input type='checkbox' class='form-check-input' id='exampleCheck1'>
-//     <label class='form-check-label' for='exampleCheck1'>Check me out</label>
-//   </div>
-//   <button type='submit' class='btn btn-primary'>Submit</button>
-// </form>`);
-//
-//
-//     $('#plotpopover').popover({
-//     html: true,
-//     sanitize: false
-// });
-
     // infodata holds the basic info about PYroMat substances.
     // Check if the infodata has been created and saved to our localStorage
     infodata = localStorage.getItem("infodata");
@@ -88,26 +65,28 @@ function init(){
     calculate_plot_isolines();
 
     // Substance Gear
-    substancePickerModal = new SubstancePicker('modal_substancepicker',
+    substancePickerModal = new SubstancePicker('substance_controls_body',
         'modal_substance.html',
         infodata.data.substances,
         change_substance);
 
     // Units Gear
-    unitControlsModal = new UnitPicker($('#modal_unitspicker'),
-        "unitspicker.html",
+    unitControlsModal = new UnitPicker($('#units_controls_body'),
+        $('#btnApplyUnits'),
+        $('#btnDefaultUnits'),
+        $('#btnCancelUnits'),
         infodata.data.legalunits,
         units,
         infodata.units,
         change_units);
 
     // Table Gear
-    tableControlsModal = new TableControls($("#property_selection_outer"),
+    tableControlsModal = new TableControls($("#table_controls_body"),
         "table_options.html",
         dataModel.get_output_properties());
 
     // Plot Gear
-    plotControlsModal = new PlotControls($("#plot_controls"),
+    plotControlsModal = new PlotControls($("#plot_controls_body"),
         "plot_options.html");
 
     // Create the Property Input Form

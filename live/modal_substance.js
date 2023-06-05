@@ -17,10 +17,8 @@ class SubstancePicker {
 
     constructor(outer_div_id, html, initialdata, callback) {
         this.$outer = $('#'+outer_div_id);
-        this.$outer.addClass("modal");
 
         this.$inner = $("<div></div>");
-        this.$inner.addClass("modal-content");
         this.$outer.append(this.$inner);
 
         this.callback = callback;
@@ -29,10 +27,6 @@ class SubstancePicker {
 
             this.button_updatefilt_name = "filt_update";
             this.button_cancel_name = "selection_cancel";
-
-            this.button_cancel = $('#'+this.button_cancel_name, this.$outer);
-            this.cancel = this.cancel.bind(this);
-            this.button_cancel.on("click", this.cancel);
 
             this.update_filter = this.update_filter.bind(this);
             $("#filt_col").on("change", this.update_filter)
@@ -145,19 +139,6 @@ class SubstancePicker {
 
         // Adjust the column sizes to match the window
         this.sTable.columns.adjust().draw()
-    }
-
-    toggle(){
-        this.$outer.toggle()
-    }
-
-    hide(){
-        this.$outer.hide();
-    }
-
-
-    cancel(){
-        this.hide();
     }
 }
 

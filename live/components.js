@@ -404,29 +404,21 @@ class PlotControls extends Subject{
 
         // Select the target div and load the html
         this.$outer = target_sel;
-        this.$outer.addClass("modalpy");
 
-        this.$inner = $("<div></div>");
-        this.$inner.addClass("modal-content");
-        this.$outer.append(this.$inner);
+        let $checks = $("#checkboxes", this.$outer);
+        let $xsel = $("#xdropdown", this.$outer);
+        let $ysel = $("#ydropdown", this.$outer);
 
-        this.hide();
+        this.checks = new PropChooserView($checks, PlotControls.EVENT_SUBCOMPONENT_ISOLINE, this.isoopts);
+        this.xsel = new ObservableDropdown($xsel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "X Axis: ", this.xopts, this.def_x);
+        this.ysel = new ObservableDropdown($ysel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "Y Axis: ", this.yopts, this.def_y);
 
-        this.$inner.load(html, ()=> {
-            let $checks = $("#checkboxes", this.$inner);
-            let $xsel = $("#xdropdown", this.$inner);
-            let $ysel = $("#ydropdown", this.$inner);
+        this.xsel.addListener(this);
+        this.ysel.addListener(this);
+        this.checks.addListener(this);
 
-            this.checks = new PropChooserView($checks, PlotControls.EVENT_SUBCOMPONENT_ISOLINE, this.isoopts);
-            this.xsel = new ObservableDropdown($xsel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "X Axis: ", this.xopts, this.def_x);
-            this.ysel = new ObservableDropdown($ysel, ObservableDropdown.EVENT_DROPDOWN_CHANGE, "Y Axis: ", this.yopts, this.def_y);
+        this.init(this.isoopts);
 
-            this.xsel.addListener(this);
-            this.ysel.addListener(this);
-            this.checks.addListener(this);
-
-            this.init(this.isoopts);
-        });
 
     }
 
@@ -440,14 +432,6 @@ class PlotControls extends Subject{
         } else if (event === PlotControls.EVENT_SUBCOMPONENT_ISOLINE){
             this.notify(this, PlotControls.EVENT_ISOLINE_VISIBILITY, data);
         }
-    }
-
-    toggle(){
-        this.$outer.toggle();
-    }
-
-    hide(){
-        this.$outer.hide();
     }
 
 }
@@ -470,23 +454,15 @@ class TableControls extends Subject{
 
         // Select the target div and load the html
         this.$outer = target_sel;
-        this.$outer.addClass("modalpy");
-
-        this.$inner = $("<div></div>");
-        this.$inner.addClass("modal-content");
         this.$outer.append(this.$inner);
 
-        this.hide();
+        let $checks = $("#checkboxes", this.$outer);
 
-        this.$inner.load(html, ()=> {
-            let $checks = $("#checkboxes", this.$inner);
+        this.checks = new PropChooserView($checks, TableControls.EVENT_SUBCOMPONENT_CHECKS, this.colopts);
 
-            this.checks = new PropChooserView($checks, TableControls.EVENT_SUBCOMPONENT_CHECKS, this.colopts);
+        this.checks.addListener(this);
 
-            this.checks.addListener(this);
-
-            this.init(this.colopts);
-        });
+        this.init(this.colopts);
 
     }
 
@@ -499,15 +475,6 @@ class TableControls extends Subject{
             this.notify(this, TableControls.EVENT_COLUMN_CHANGE, data);
         }
     }
-
-    toggle(){
-        this.$outer.toggle();
-    }
-
-    hide(){
-        this.$outer.hide();
-    }
-
 }
 
 
@@ -521,46 +488,34 @@ class TableControls extends Subject{
 class UnitPicker {
     basic_set = {'temperature':1, 'pressure':1, 'volume':1, 'matter':1, "energy":1};
     basic_mode = true;
-    constructor(target_sel, html, valid_units, currentval, defaultval, set_callback, basic_mode=true) {
+    constructor(target_sel, button_apply, button_default, button_cancel, valid_units, currentval, defaultval, set_callback, basic_mode=true) {
         this.change_units_callback = set_callback;
         this.currentval = currentval;
         this.defaultval = defaultval;
 
         this.basic_mode = basic_mode;
 
-        this.unit_form_name = "unit_form";
-        this.button_apply_name = "unit_apply";
-        this.button_default_name = "unit_default";
-        this.button_cancel_name = "unit_cancel";
+        this.unit_form = target_sel
 
         // Select the target div and load the html
         this.$outer = target_sel;
-        this.$outer.addClass("modalpy");
 
-        this.$inner = $("<div></div>");
-        this.$inner.addClass("modal-content");
-        this.$outer.append(this.$inner);
+        this.button_apply = button_apply;
+        this.button_default = button_default;
+        this.button_cancel = button_cancel;
 
-        this.$inner.load(html, ()=>{
-            this.unit_form = $('#'+this.unit_form_name, this.$outer);
+        // Attach the apply, revert and cancel buttons
+        this.apply_onclick = this.apply_onclick.bind(this);
+        this.button_apply.on("click", this.apply_onclick);
 
-            // Attach the apply, revert and cancel buttons
-            this.button_apply = $('#'+this.button_apply_name, this.$outer);
-            this.apply_onclick = this.apply_onclick.bind(this);
-            this.button_apply.on("click", this.apply_onclick);
+        this.default_onclick = this.default_onclick.bind(this);
+        this.button_default.on("click", this.default_onclick);
 
-            this.button_default = $('#'+this.button_default_name, this.$outer);
-            this.default_onclick = this.default_onclick.bind(this);
-            this.button_default.on("click", this.default_onclick);
+        this.cancel_onclick = this.cancel_onclick.bind(this);
+        this.button_cancel.on("click", this.cancel_onclick);
 
-            this.button_cancel = $('#'+this.button_cancel_name, this.$outer);
-            this.cancel_onclick = this.cancel_onclick.bind(this);
-            this.button_cancel.on("click", this.cancel_onclick);
-
-            this.get_values = this.get_values.bind(this);
-
-            this.init(valid_units, this.currentval);
-        });
+        this.get_values = this.get_values.bind(this);
+        this.init(valid_units, this.currentval);
     }
 
     /**
@@ -669,17 +624,7 @@ class UnitPicker {
      */
     cancel_onclick(){
         this.revert_vals();
-        this.hide();
     }
-
-    toggle(){
-        this.$outer.toggle()
-    }
-
-    hide(){
-        this.$outer.hide();
-    }
-
 }
 
 /**
@@ -740,10 +685,6 @@ class PropEntryView{
         } else if (this.layout === "col"){
             props.forEach((prop) => {
 
-                // <div className="form-group mb-2 row">
-                //     <label htmlFor="T" className="col-sm-4 col-form-label">Temperature</label>
-                //     <input type="number" className="form-control col-sm-8" id="T" value="100">
-                // </div>
                 let div = $('<div class="form-group mb-2 row">');
                 let propname = `${prop}`;
 
@@ -901,14 +842,6 @@ class PropChooserView extends Subject{
                 box.checked = false;
             }
         });
-    }
-
-    toggle(){
-        this.$outer.toggle();
-    }
-
-    hide(){
-        this.$outer.hide();
     }
 }
 

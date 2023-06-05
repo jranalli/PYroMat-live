@@ -141,10 +141,28 @@
             <!-- Current Substance Chosen: JB-->
             <div class="subtitle">
                 <b>Current Substance: <label id="sub_string"></label></b>
-                <gearbutton class="gearbutton" title="Change substance." onclick="onclick_toggle_substancecontrols()"><i class="fa fa-cog"></i></gearbutton>
+                <gearbutton class="gearbutton" title="Change substance." data-target="#substance_controls" data-toggle="modal"><i class="fa fa-cog"></i></gearbutton>
             </div>
 
-            <div id="modal_substancepicker" class="window1">
+            <div id="substance_controls" class="modal fade" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Substance Selection</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body">
+                          <p>Click on the substance ID link to change the active substance. Use the controls to the right to filter the table. </p>
+                          <div id="substance_controls_body">
+                          </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btnCancelSubstance">Cancel</button>
+                      </div>
+                    </div>
+                  </div>
             </div>
 
 
@@ -153,7 +171,7 @@
                 <div class="col-md-4">
                     <div id="property_controls" class="windowed">
                         <h3 class="sec-title">Property Input
-                            <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton>
+                            <gearbutton class="gearbutton" title="Change the units for selected substance." data-target="#units_controls" data-toggle="modal"><i class="fa fa-cog"></i></gearbutton>
                         </h3>
                         <div id="prop-entry" class="mr-2 ml-2">
                         </div>
@@ -164,11 +182,7 @@
                 <div class="col-md">
                     <div id="plot_display" class="windowed">
                         <h3 class="sec-title">Plot
-                            <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
-                            <!--<button id="plotpopover" type="button" class="btn btn-secondary" data-container="body" data-toggle="popover" data-placement="bottom" data-trigger="focus" data-content="Vivamus
-sagittis lacus vel augue laoreet rutrum faucibus.">
-  Popover on bottom
-</button>-->
+                            <gearbutton class="gearbutton" data-target="#plot_controls" data-toggle="modal" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
                         </h3>
                     </div>
                 </div>
@@ -176,21 +190,80 @@ sagittis lacus vel augue laoreet rutrum faucibus.">
 
 
 
-            <div id="modal_unitspicker" class="window2">
+            <div id="units_controls" class="modal fade" tabindex="-1" role="dialog">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Unit Settings</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body">
+                          <p>Make changes to the specified units. Caution: changing units will cause point data to be lost!</p>
+                          <form id="units_controls_body">
+                          </form>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btnCancelUnits">Cancel</button>
+                          <button type="button" class="btn btn-primary" id="btnDefaultUnits">Default</button>
+                        <button type="button" class="btn btn-primary" id="btnApplyUnits">Apply changes</button>
+                      </div>
+                    </div>
+                  </div>
             </div>
-            <div id="plot_controls" class="window3">
+            <div id="plot_controls" class="modal fade" tabindex="-1" role="dialog">\
+                  <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Plot Settings</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body" id="plot_controls_body">
+                          <p>Note: Changes to these settings are updated in realtime.</p>
+                        <strong>Isolines</strong>
+                        <p>Toggle checks to show/hide isolines for properties.</p>
+                        <div id="checkboxes" class="plotoptions-checks"></div>
+                        <strong>Axes</strong>
+                        <p>Change the axis variable on the plot.</p>
+                        <div id="xdropdown" class="plotoptions-drops"></div>
+                        <div id="ydropdown" class="plotoptions-drops"></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      </div>
+                    </div>
+                  </div>
             </div>
 
             <!-- Property Tables JB-->
             <div>
                 <h3 class="subtitle">Property Table
-                    <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_toggle_tablecontrols()"><i class="fa fa-cog"></i></gearbutton>
+                    <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." data-target="#table_controls" data-toggle="modal" ><i class="fa fa-cog"></i></gearbutton>
                 </h3>
-
-                <div id="property_selection_outer" class="window4">
-                </div>
                 <div id="property_table">
                 </div>
+            </div>
+            <div id="table_controls" class="modal fade" tabindex="-1" role="dialog">\
+                  <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Table Settings</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">&times;</span>
+                        </button>
+                      </div>
+                      <div class="modal-body" id="table_controls_body">
+                          <p>Toggle checks to show/hide various table columns. Note: updates will be made in real time.</p>
+                        <div id="checkboxes" class="plotoptions-checks"></div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                      </div>
+                    </div>
+                  </div>
             </div>
         </div>
     </div>
