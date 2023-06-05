@@ -699,7 +699,7 @@ class PropEntryView{
 
     constructor(formHTMLid, input_properties, prop_strings, compute_callback) {
         this.target = $("#"+formHTMLid);
-        this.prop_table_name = "propinput";
+        this.prop_inner_name = "propinner";
         this.prop_form_name = "propform";
         this.post_button_name = "post_props";
         this.layout = "col";  // "row" or "col"
@@ -711,18 +711,17 @@ class PropEntryView{
         this.target.append(propform);
         this.prop_form = $("#"+this.prop_form_name, this.target);
 
-        let proptable = $('<table/>').attr({id: this.prop_table_name});
-        this.target.append(proptable);
-        this.prop_table = $("#"+this.prop_table_name, this.target);
+        let propinner = $('<div/>').attr({id: this.prop_inner_name});
+        this.target.append(propinner);
+        this.prop_inner = $("#"+this.prop_inner_name, this.target);
+
+        this.create_propform(this.props, prop_strings);
 
         let postbutton = $('<input/>').attr({type: 'button', id: this.post_button_name, value: "Compute"});
         this.target.append(postbutton);
         this.post_button = $("#"+this.post_button_name, this.target);
         this.post_onclick = this.post_onclick.bind(this);
         this.post_button.on("click", this.post_onclick);
-
-
-        this.create_propform(this.props, prop_strings);
 
     }
 
@@ -734,45 +733,31 @@ class PropEntryView{
      */
     create_propform(props, units=null) {
         // Always start from scratch
-        this.prop_table.empty();
+        this.prop_inner.empty();
 
         if (this.layout === "row"){
-            // Build a header
-            let head = "<thead><tr>"
-            props.forEach((prop) => {
-                if (units != null) {
-                    prop = prop + " (" + units[prop] + ")";
-                }
-                head = head + "<th><span title='"+this.prop_names[prop]+"'>" + prop + "</span></th>";
-            });
-            head = head + "</tr></thead>";
-
-            this.prop_table.append(head);
-
-            // Build each input box
-            let tr = $("<tr>")
-            props.forEach((prop) => {
-                let td = $("<td>");
-                // Use string formatting to prevent insanity
-                let inputbox = `<input type="text" propvalue="${prop}" id="${prop}_input" name="${prop}_input">`;
-                tr.append(td.append(inputbox));
-            });
-            this.prop_table.append(tr);
+            //this.prop_form.append();
         } else if (this.layout === "col"){
             props.forEach((prop) => {
-                let tr = $("<tr>");
-                let lbl = $("<td>");
-                let p = $("<span title='"+this.prop_names[prop]+"'>")
+
+                // <div className="form-group mb-2 row">
+                //     <label htmlFor="T" className="col-sm-4 col-form-label">Temperature</label>
+                //     <input type="number" className="form-control col-sm-8" id="T" value="100">
+                // </div>
+                let div = $('<div class="form-group mb-2 row">');
+                let propname = `${prop}`;
+
+
                 let proplbl = prop;
                 if (units != null) {
                     proplbl = proplbl + " (" + units[prop] + "):";
                 }
-                tr.append(lbl.append(p.append(proplbl)));
-                let td = $("<td>");
+                let lbltxt = `<label htmlFor="${prop}_input" class="col-sm-4 col-form-label">${proplbl}</label>`;
+                div.append(lbltxt);
                 // Use string formatting to prevent insanity
-                let inputbox = `<input type="text" propvalue="${prop}" id="${prop}_input" name="${prop}_input">`;
-                tr.append(td.append(inputbox));
-                this.prop_table.append(tr);
+                let inputbox = `<input type="text" propvalue="${prop}" id="${prop}_input" name="${prop}_input" class="form-control col-sm-8">`;
+                div.append(inputbox);
+                this.prop_form.append(div);
             });
 
         }
@@ -786,7 +771,7 @@ class PropEntryView{
         let outdata = {}; // A dict of specified props
 
         // Loop over each input box
-        $('input', this.prop_table).each((id, box) =>{
+        $('input', this.prop_form).each((id, box) =>{
             let value = box.value;
             if (value !== ""){ // If specified, add it to the prop dict
                 let prop = box.attributes['propvalue'].nodeValue;

@@ -135,6 +135,7 @@
                     Various isolines and different plot types can be selected in the Plot settings.
                     Table columns can be hidden in the Property Tables section.
                 </p>
+
             </div>
 
             <!-- Current Substance Chosen: JB-->
@@ -146,36 +147,42 @@
             <div id="modal_substancepicker" class="window1">
             </div>
 
-            <div class="container-fluid">
-                <div class="row">
-                    <!-- Property Input JB-->
-                    <div class="col-md-4">
-                        <div id="property_controls" class="windowed">
-                            <h3 class="sec-title">Property Input
-                                <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton></h3>
-                        </div>
 
-                    </div>
-
-                    <!-- Plot JB-->
-                    <div class="col-md">
-                        <div id="plot_display" class="windowed">
-                            <h3 class="sec-title">Plot
-                                <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
-                            </h3>
+            <div class="row">
+                <!-- Property Input JB-->
+                <div class="col-md-4">
+                    <div id="property_controls" class="windowed">
+                        <h3 class="sec-title">Property Input
+                            <gearbutton class="gearbutton" title="Change the units for selected substance." onclick="onclick_toggle_unitcontrols()"><i class="fa fa-cog"></i></gearbutton>
+                        </h3>
+                        <div id="prop-entry" class="mr-2 ml-2">
                         </div>
                     </div>
                 </div>
 
-
+                <!-- Plot JB-->
+                <div class="col-md">
+                    <div id="plot_display" class="windowed">
+                        <h3 class="sec-title">Plot
+                            <gearbutton class="gearbutton" title="Displays selected isobars in plot and chooses X or Y axis units." onclick="onclick_toggle_plotcontrols()"><i class="fa fa-cog"></i></gearbutton>
+                            <!--<button id="plotpopover" type="button" class="btn btn-secondary" data-container="body" data-toggle="popover" data-placement="bottom" data-trigger="focus" data-content="Vivamus
+sagittis lacus vel augue laoreet rutrum faucibus.">
+  Popover on bottom
+</button>-->
+                        </h3>
+                    </div>
+                </div>
             </div>
+
+
+
             <div id="modal_unitspicker" class="window2">
             </div>
             <div id="plot_controls" class="window3">
             </div>
 
             <!-- Property Tables JB-->
-            <div class="container-fluid">
+            <div>
                 <h3 class="subtitle">Property Table
                     <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." onclick="onclick_toggle_tablecontrols()"><i class="fa fa-cog"></i></gearbutton>
                 </h3>
