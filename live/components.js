@@ -389,7 +389,7 @@ class PlotControls extends Subject{
     ysel;
     checks;
 
-    constructor(target_sel, html, isoopts=null, xopts=null, yopts=null) {
+    constructor(target_sel, isoopts=null, xopts=null, yopts=null) {
         super();
 
         if (isoopts){
@@ -445,7 +445,7 @@ class TableControls extends Subject{
 
     checks;
 
-    constructor(target_sel, html, colopts=null) {
+    constructor(target_sel, colopts=null) {
         super();
 
         if (colopts){
@@ -538,7 +538,6 @@ class UnitPicker {
         }
 
         let $table = $("<table>");
-        $table.addClass("unitselector")
         // Loop over all the configured unit types
         Object.keys(looplist).forEach(unit_cat => {
             // The form will be a list of labelled select boxes

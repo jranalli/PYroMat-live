@@ -82,12 +82,10 @@ function init(){
 
     // Table Gear
     tableControlsModal = new TableControls($("#table_controls_body"),
-        "table_options.html",
         dataModel.get_output_properties());
 
     // Plot Gear
-    plotControlsModal = new PlotControls($("#plot_controls_body"),
-        "plot_options.html");
+    plotControlsModal = new PlotControls($("#plot_controls_body"));
 
     // Create the Property Input Form
     propEntryForm = new PropEntryView("prop-entry",

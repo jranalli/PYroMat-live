@@ -18,8 +18,7 @@
 
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="bsindex.css">
-    <!--<link rel="stylesheet" type="text/css" href="pyromat.css">-->
+    <link rel="stylesheet" href="pyromat_bootstrap.css">
     <link rel="stylesheet" type="text/css" href="pyromat_live.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
 
@@ -36,7 +35,6 @@
 
 <body>
 
-<!-- This menu list is what shoud be placed on each calculator page so user can easily navigate between them. JB -->
 <div class="wrapper">
     <!-- Sidebar -->
     <nav id="sidebar">
@@ -81,11 +79,6 @@
     <div id="content">
         <nav class="navbar navbar-expand-lg navbar-dark bg-light">
             <div class="container-fluid">
-
-                <!--                        <button type="button" id="sidebarCollapse" class="btn btn-info">-->
-                <!--                            <i class="fas fa-align-left"></i>-->
-                <!--                            <span>Toggle Sidebar</span>-->
-                <!--                        </button>-->
 
                 <H1>PYroMat</H1>
                 <button class="btn btn-dark d-inline-block d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
@@ -138,7 +131,6 @@
 
             </div>
 
-            <!-- Current Substance Chosen: JB-->
             <div class="subtitle">
                 <b>Current Substance: <label id="sub_string"></label></b>
                 <gearbutton class="gearbutton" title="Change substance." data-target="#substance_controls" data-toggle="modal"><i class="fa fa-cog"></i></gearbutton>
@@ -167,7 +159,6 @@
 
 
             <div class="row">
-                <!-- Property Input JB-->
                 <div class="col-md-4">
                     <div id="property_controls" class="windowed">
                         <h3 class="sec-title">Property Input
@@ -178,7 +169,6 @@
                     </div>
                 </div>
 
-                <!-- Plot JB-->
                 <div class="col-md">
                     <div id="plot_display" class="windowed">
                         <h3 class="sec-title">Plot
@@ -206,7 +196,7 @@
                       </div>
                       <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal" id="btnCancelUnits">Cancel</button>
-                          <button type="button" class="btn btn-primary" id="btnDefaultUnits">Default</button>
+                         <button type="button" class="btn btn-primary" id="btnDefaultUnits">Default</button>
                         <button type="button" class="btn btn-primary" id="btnApplyUnits">Apply changes</button>
                       </div>
                     </div>
@@ -238,7 +228,6 @@
                   </div>
             </div>
 
-            <!-- Property Tables JB-->
             <div>
                 <h3 class="subtitle">Property Table
                     <gearbutton class="gearbutton" title="Displays data selected from Plot and Inputs." data-target="#table_controls" data-toggle="modal" ><i class="fa fa-cog"></i></gearbutton>
@@ -267,6 +256,7 @@
             </div>
         </div>
     </div>
+
     <!-- Popper.JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
     <!-- Bootstrap JS -->
