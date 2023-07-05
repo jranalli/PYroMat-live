@@ -82,6 +82,9 @@ called, the unit arguments are still separated out of the args dict, but
 they are ignored.
 """
 
+GLOBALMEM = {}
+
+
 import flask
 import pyromat as pm
 import numpy as np
@@ -325,7 +328,6 @@ def compute_iso_line(subst, n=25, scaling='linear', **kwargs):
                 the response will be an array of dicts representing all the
                 individual lines.
     """
-
     # Keep track of whether the users want the defaults
     default_mode = False
     if 'default' in kwargs:
@@ -1008,6 +1010,22 @@ class IsolineRequest(PMGIRequest):
             self.mh.message('Processing aborted due to error.')
             return True
 
+        import hashlib
+
+        def tofn(args):
+            return "./mem/" + str(
+                int(hashlib.sha1(str(args).encode("utf-8")).hexdigest(),
+                    16) % (10 ** 8)) + ".json"
+
+        fn = tofn(self.args)
+
+        if fn in GLOBALMEM:
+            print("load")
+            self.data = GLOBALMEM[fn]
+            return True
+        else:
+            print(self.args)
+
         args = self.args.copy()
         # Leave only the property arguments
         subst = self.get_substance(args.pop('id'))
@@ -1016,6 +1034,7 @@ class IsolineRequest(PMGIRequest):
 
         try:
             self.data = compute_iso_line(subst, n=50, **args)
+            GLOBALMEM[fn] = self.data
         except (pm.utility.PMParamError, pm.utility.PMAnalysisError) as e:
             self.mh.error('Failed to generate isoline.')
             self.mh.message(repr(sys.exc_info()[1]))

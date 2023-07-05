@@ -98,7 +98,7 @@ function init(){
         dataModel,
         unitModel.get_units_for_prop(dataModel.get_output_properties()),
         compute_point);
-    dataModel.addListener(plotView);
+    //dataModel.addListener(plotView);
     tableControlsModal.addListener(plotView);
     plotControlsModal.addListener(plotView);
 
@@ -221,6 +221,7 @@ function compute_auxline(props={}){
                 keys.splice(keys.indexOf("default", 1))
             }
             let prop = keys[0];
+            console.log(prop)
 
             // If it had multiple lines, loop over to add each individually
             if (Array.isArray(response.data)){
@@ -230,6 +231,10 @@ function compute_auxline(props={}){
             } else {
                 // Add the line
                 dataModel.add_auxline(prop, line, 'global');
+            }
+            if (dataModel.get_auxlines()['global'].length == 60){
+                dataModel.addListener(plotView);
+                plotView.draw_auxlines(dataModel.get_auxlines())
             }
 
     });
