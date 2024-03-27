@@ -278,6 +278,7 @@ function compute_cycle(){
 
     let FuelCost = 7e-6 // $/J ($0.007/MJ)
     let EnergyValue = 2.8e-5 // $/kJ ($0.10/kWh)
+    let EnergyValue_kWh = 0.1
     let nyrs = 5;
 
     let items = $("input","#cycle-params");
@@ -329,7 +330,7 @@ function compute_cycle(){
             let eff = wnet/qhi;
             let life_fc = (formData['mdot'] * qhi)/formData['fuelEff'] * FuelCost * 60*60*24*365*nyrs;
             let life_tc = life_fc + formData['cost'];
-            let life_svg = formData['mdot'] * wnet * EnergyValue * 60*60*24*365*nyrs;
+            let life_svg = formData['mdot'] * wnet * EnergyValue_kWh * 24*365*nyrs;
 
             $("#out_efficiency").text((eff*100).toLocaleString('en-US', {maximumFractionDigits: 1}));
             $("#out_power").text((wnet*formData['mdot']).toLocaleString('en-US', {maximumFractionDigits: 0}));
